@@ -9,6 +9,7 @@ import '../../../core/widgets/ui.dart';
 import '../../attendance/presentation/check_in_sheet.dart';
 import 'correction_request_screen.dart';
 import 'my_attendance_screen.dart';
+import 'student_sessions_screen.dart';
 
 class StudentDashboard extends StatelessWidget {
   final String userName;
@@ -87,8 +88,20 @@ class StudentDashboard extends StatelessWidget {
                 MyIdCard(
                   metaKey: 'student_id',
                   metaLabel: tr('student_id_l'),
-                  extraMetaKey: 'student_code',
-                  extraMetaLabel: tr('student_code_l'),
+                  levelLabel: tr('level_l'),
+                ),
+                const SizedBox(height: 12),
+                MenuTile(
+                  icon: Icons.calendar_month_rounded,
+                  color: AppColors.primary,
+                  title: tr('student_sessions'),
+                  subtitle: tr('student_sessions_sub'),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const StudentSessionsScreen(),
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 12),
                 MenuTile(
@@ -142,11 +155,11 @@ class _StudentOverviewState extends State<_StudentOverview> {
   @override
   void initState() {
     super.initState();
-    _future = ApiClient().getList('/attendance/me').then(
-          (list) => list
-              .whereType<Map>()
-              .map(Map<String, dynamic>.from)
-              .toList(),
+    _future = ApiClient()
+        .getList('/attendance/me')
+        .then(
+          (list) =>
+              list.whereType<Map>().map(Map<String, dynamic>.from).toList(),
         );
   }
 
@@ -174,10 +187,7 @@ class _StudentOverviewState extends State<_StudentOverview> {
           final code = r['course_code']?.toString() ?? '-';
           byCourse.putIfAbsent(
             code,
-            () => {
-              'name': r['course_name']?.toString() ?? '',
-              'count': '0',
-            },
+            () => {'name': r['course_name']?.toString() ?? '', 'count': '0'},
           );
           byCourse[code]!['count'] =
               '${int.parse(byCourse[code]!['count']!) + 1}';
@@ -212,8 +222,7 @@ class _StudentOverviewState extends State<_StudentOverview> {
                           ),
                         ),
                         StatusChip(
-                          status:
-                              '${e.value['count']} ${tr('sessions_n')}',
+                          status: '${e.value['count']} ${tr('sessions_n')}',
                         ),
                       ],
                     ),
@@ -222,10 +231,7 @@ class _StudentOverviewState extends State<_StudentOverview> {
               const SizedBox(height: 10),
               Text(
                 tr('upcoming_na'),
-                style: const TextStyle(
-                  color: AppColors.textGrey,
-                  fontSize: 12,
-                ),
+                style: const TextStyle(color: AppColors.textGrey, fontSize: 12),
               ),
             ],
           ),
@@ -248,10 +254,7 @@ class _StudentOverviewState extends State<_StudentOverview> {
           ),
           Text(
             label,
-            style: const TextStyle(
-              color: AppColors.textGrey,
-              fontSize: 12,
-            ),
+            style: const TextStyle(color: AppColors.textGrey, fontSize: 12),
           ),
         ],
       ),

@@ -378,6 +378,23 @@ class ApiClient {
         },
       ];
     }
+    if (path == '/students/my-timetable') {
+      return [
+        {
+          'slot_id': 5,
+          'course_code': 'CS101',
+          'course_name': 'Intro to CS',
+          'section_id': 2,
+          'section_name': 'Section 1',
+          'room_name': 'Hall A',
+          'room_type': 'lecture',
+          'building': 'Main',
+          'day_of_week': 'Monday',
+          'start_time': '08:00',
+          'end_time': '10:00',
+        },
+      ];
+    }
     if (path == '/corrections/mine' || path == '/corrections/pending') {
       return [
         {
@@ -398,6 +415,44 @@ class ApiClient {
     if (path == '/admin/courses') {
       return [
         {'course_id': 1, 'course_code': 'CS101', 'course_name': 'Intro to CS'},
+      ];
+    }
+    if (path == '/admin/students') {
+      return [
+        {
+          'student_id': 7,
+          'student_code': 'S1001',
+          'student_name': 'Demo Student',
+          'level': 2,
+          'email': 'student@test.com',
+          'is_active': true,
+        },
+      ];
+    }
+    if (path == '/admin/staff') {
+      return [
+        {
+          'staff_id': 4,
+          'staff_name': 'Demo Lecturer',
+          'staff_type': 'lecturer',
+          'email': 'lecturer@test.com',
+          'is_active': true,
+        },
+      ];
+    }
+    if (path == '/admin/enrollments') {
+      return [
+        {
+          'enrollment_id': 1,
+          'status': 'active',
+          'student_id': 7,
+          'student_code': 'S1001',
+          'student_name': 'Demo Student',
+          'section_id': 2,
+          'section_name': 'Section 1',
+          'course_code': 'CS101',
+          'course_name': 'Intro to CS',
+        },
       ];
     }
     if (path == '/admin/rooms') {

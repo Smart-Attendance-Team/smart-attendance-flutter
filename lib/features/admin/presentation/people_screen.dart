@@ -72,9 +72,9 @@ class _PeopleScreenState extends State<PeopleScreen>
         _sPass.text.length < 8 ||
         _sCode.text.trim().isEmpty ||
         _sName.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(tr('fill_all'))),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(tr('fill_all'))));
       return;
     }
     setState(() => _busy = true);
@@ -99,10 +99,10 @@ class _PeopleScreenState extends State<PeopleScreen>
       _sName.clear();
       _sLevel.clear();
       _sDept.clear();
-      _showIds(
-        'Student created',
-        {'student_id': created['student_id'], 'user_id': created['user_id']},
-      );
+      _showIds(tr('student_created'), {
+        'student_id': created['student_id'],
+        'user_id': created['user_id'],
+      });
     } on ApiException catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
@@ -111,9 +111,9 @@ class _PeopleScreenState extends State<PeopleScreen>
       }
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(tr('cant_load'))),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(tr('cant_load'))));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -124,9 +124,9 @@ class _PeopleScreenState extends State<PeopleScreen>
     if (_tEmail.text.trim().isEmpty ||
         _tPass.text.length < 8 ||
         _tName.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(tr('fill_all'))),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(tr('fill_all'))));
       return;
     }
     setState(() => _busy = true);
@@ -147,10 +147,10 @@ class _PeopleScreenState extends State<PeopleScreen>
       _tPass.clear();
       _tName.clear();
       _tDept.clear();
-      _showIds(
-        'Staff created',
-        {'staff_id': created['staff_id'], 'user_id': created['user_id']},
-      );
+      _showIds(tr('staff_created'), {
+        'staff_id': created['staff_id'],
+        'user_id': created['user_id'],
+      });
     } on ApiException catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
@@ -159,9 +159,9 @@ class _PeopleScreenState extends State<PeopleScreen>
       }
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(tr('cant_load'))),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(tr('cant_load'))));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -198,7 +198,7 @@ class _PeopleScreenState extends State<PeopleScreen>
           ElevatedButton(
             style: ElevatedButton.styleFrom(minimumSize: const Size(100, 44)),
             onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
+            child: Text(tr('done')),
           ),
         ],
       ),
@@ -209,15 +209,15 @@ class _PeopleScreenState extends State<PeopleScreen>
     final pass = _csvPass.text;
     final csv = _csvData.text.trim();
     if (pass.length < 8) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(tr('csv_pass'))),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(tr('csv_pass'))));
       return;
     }
     if (csv.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(tr('csv_data'))),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(tr('csv_data'))));
       return;
     }
     final query = <String, dynamic>{'default_password': pass};
@@ -233,10 +233,9 @@ class _PeopleScreenState extends State<PeopleScreen>
         queryParameters: query,
       );
       if (!mounted) return;
-      final rejected = ApiClient.asList(res['rejected_rows'])
-          .whereType<Map>()
-          .map(Map<String, dynamic>.from)
-          .toList();
+      final rejected = ApiClient.asList(
+        res['rejected_rows'],
+      ).whereType<Map>().map(Map<String, dynamic>.from).toList();
       showDialog(
         context: context,
         builder: (_) => AlertDialog(
@@ -271,10 +270,9 @@ class _PeopleScreenState extends State<PeopleScreen>
           ),
           actions: [
             ElevatedButton(
-              style:
-                  ElevatedButton.styleFrom(minimumSize: const Size(100, 44)),
+              style: ElevatedButton.styleFrom(minimumSize: const Size(100, 44)),
               onPressed: () => Navigator.pop(context),
-              child: const Text('OK'),
+              child: Text(tr('done')),
             ),
           ],
         ),
@@ -287,9 +285,9 @@ class _PeopleScreenState extends State<PeopleScreen>
       }
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(tr('cant_load'))),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(tr('cant_load'))));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -410,13 +408,9 @@ class _PeopleScreenState extends State<PeopleScreen>
                         value: 'lecturer',
                         child: Text(tr('role_lecturer')),
                       ),
-                      const DropdownMenuItem(
-                        value: 'TA',
-                        child: Text('TA'),
-                      ),
+                      DropdownMenuItem(value: 'TA', child: Text(tr('role_ta'))),
                     ],
-                    onChanged: (v) =>
-                        setState(() => _tType = v ?? 'lecturer'),
+                    onChanged: (v) => setState(() => _tType = v ?? 'lecturer'),
                   ),
                   const SizedBox(height: 12),
                   AppField(
@@ -437,9 +431,7 @@ class _PeopleScreenState extends State<PeopleScreen>
                     controller: _tDept,
                     label: tr('dept_id'),
                     keyboardType: TextInputType.number,
-                    inputFormatters: [
-                      FilteringTextInputFormatter.digitsOnly,
-                    ],
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                   ),
                   const SizedBox(height: 14),
                   AppButton(

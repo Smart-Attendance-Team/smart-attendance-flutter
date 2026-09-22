@@ -41,13 +41,17 @@ class _AuditHistoryScreenState extends State<AuditHistoryScreen> {
     return ApiClient.asMap(res.data);
   }
 
-  void _apply() {
+  Future<bool> _apply() {
     final f = <String, dynamic>{};
     if (_action.text.trim().isNotEmpty) f['action'] = _action.text.trim();
     if (_entity.text.trim().isNotEmpty) {
       f['entity_type'] = _entity.text.trim();
     }
-    setState(() => _future = _load(f));
+    final future = _load(f);
+    setState(() {
+      _future = future;
+    });
+    return future.then((_) => true).catchError((_) => false);
   }
 
   @override
@@ -84,7 +88,7 @@ class _AuditHistoryScreenState extends State<AuditHistoryScreen> {
                 AppButton(
                   label: tr('filter'),
                   icon: Icons.search_rounded,
-                  onPressed: _apply,
+                  onPressed: () => refreshWithToast(context, _apply),
                 ),
               ],
             ),

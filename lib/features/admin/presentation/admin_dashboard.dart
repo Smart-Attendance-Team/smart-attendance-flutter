@@ -6,6 +6,7 @@ import '../../../core/widgets/app_drawer.dart';
 import '../../../core/widgets/ui.dart';
 import 'courses_screen.dart';
 import 'departments_screen.dart';
+import 'directory_screen.dart';
 import 'enrollment_screen.dart';
 import 'people_screen.dart';
 import 'reports_screen.dart';
@@ -73,6 +74,22 @@ class AdminDashboard extends StatelessWidget {
                   title: tr('timetable'),
                   subtitle: tr('timetable_sub'),
                   onTap: () => go(const TimetableScreen()),
+                ),
+                const SizedBox(height: 12),
+                MenuTile(
+                  icon: Icons.school_rounded,
+                  color: Colors.indigo,
+                  title: tr('students'),
+                  subtitle: tr('students_sub'),
+                  onTap: () => go(const DirectoryScreen(students: true)),
+                ),
+                const SizedBox(height: 12),
+                MenuTile(
+                  icon: Icons.co_present_rounded,
+                  color: Colors.brown,
+                  title: tr('lecturers'),
+                  subtitle: tr('lecturers_sub'),
+                  onTap: () => go(const DirectoryScreen(students: false)),
                 ),
                 const SizedBox(height: 12),
                 MenuTile(

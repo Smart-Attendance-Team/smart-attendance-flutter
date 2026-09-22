@@ -39,11 +39,15 @@ class _LiveRosterScreenState extends State<LiveRosterScreen> {
     return ApiClient.asMap(res.data);
   }
 
-  void _reload() {
+  /// Manual refresh with visible confirmation; also resets filters.
+  Future<bool> _reload() {
+    final future = _load();
     setState(() {
       _filter = 'all';
-      _future = _load();
+      _search.clear();
+      _future = future;
     });
+    return future.then((_) => true).catchError((_) => false);
   }
 
   Future<void> _fix(int attendanceId, String current) async {
@@ -58,29 +62,26 @@ class _LiveRosterScreenState extends State<LiveRosterScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-              DropdownButtonFormField<String>(
-                initialValue: status,
-                items: [
-                  DropdownMenuItem(
-                    value: 'present',
-                    child: Text(tr('st_present')),
-                  ),
-                  DropdownMenuItem(
-                    value: 'absent',
-                    child: Text(tr('st_absent')),
-                  ),
-                  DropdownMenuItem(
-                    value: 'excused',
-                    child: Text(tr('st_excused')),
-                  ),
-                ],
-                onChanged: (v) => setDialog(() => status = v ?? status),
-              ),
-              const SizedBox(height: 12),
-              AppField(
-                controller: reason,
-                label: tr('reason_min'),
-              ),
+                DropdownButtonFormField<String>(
+                  initialValue: status,
+                  items: [
+                    DropdownMenuItem(
+                      value: 'present',
+                      child: Text(tr('st_present')),
+                    ),
+                    DropdownMenuItem(
+                      value: 'absent',
+                      child: Text(tr('st_absent')),
+                    ),
+                    DropdownMenuItem(
+                      value: 'excused',
+                      child: Text(tr('st_excused')),
+                    ),
+                  ],
+                  onChanged: (v) => setDialog(() => status = v ?? status),
+                ),
+                const SizedBox(height: 12),
+                AppField(controller: reason, label: tr('reason_min')),
               ],
             ),
           ),
@@ -90,9 +91,7 @@ class _LiveRosterScreenState extends State<LiveRosterScreen> {
               child: Text(tr('cancel')),
             ),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                minimumSize: const Size(100, 44),
-              ),
+              style: ElevatedButton.styleFrom(minimumSize: const Size(100, 44)),
               onPressed: () => Navigator.pop(context, {
                 'status': status,
                 'reason': reason.text.trim(),
@@ -106,9 +105,9 @@ class _LiveRosterScreenState extends State<LiveRosterScreen> {
     reason.dispose();
     if (data == null || (data['reason'] ?? '').length < 3) {
       if (data != null && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(tr('reason_need3'))),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(tr('reason_need3'))));
       }
       return;
     }
@@ -119,9 +118,9 @@ class _LiveRosterScreenState extends State<LiveRosterScreen> {
       );
       if (!mounted) return;
       _reload();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(tr('saved_ok'))),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(tr('saved_ok'))));
     } on ApiException catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
@@ -130,9 +129,9 @@ class _LiveRosterScreenState extends State<LiveRosterScreen> {
       }
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(tr('cant_load'))),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(tr('cant_load'))));
       }
     }
   }
@@ -143,7 +142,10 @@ class _LiveRosterScreenState extends State<LiveRosterScreen> {
       appBar: AppBar(
         title: Text('${tr('roster')} ${ltr(widget.sessionId)}'),
         actions: [
-          IconButton(onPressed: _reload, icon: const Icon(Icons.refresh)),
+          IconButton(
+            onPressed: () => refreshWithToast(context, _reload),
+            icon: const Icon(Icons.refresh),
+          ),
         ],
       ),
       body: FutureBuilder<Map<String, dynamic>>(
@@ -156,19 +158,16 @@ class _LiveRosterScreenState extends State<LiveRosterScreen> {
             final err = snapshot.error;
             final code = err is ApiException ? err.statusCode : null;
             return AppError(
-              message: err is ApiException
-                  ? err.message
-                  : tr('cant_load'),
+              message: err is ApiException ? err.message : tr('cant_load'),
               hint: (code == 404 || code == 403) ? tr('roster_hint') : null,
               onRetry: _reload,
             );
           }
           final data = snapshot.data ?? const {};
           final summary = ApiClient.asMap(data['summary']);
-          final all = ApiClient.asList(data['students'])
-              .whereType<Map>()
-              .map(Map<String, dynamic>.from)
-              .toList();
+          final all = ApiClient.asList(
+            data['students'],
+          ).whereType<Map>().map(Map<String, dynamic>.from).toList();
 
           final total = (summary['total'] is int)
               ? summary['total'] as int
@@ -176,11 +175,11 @@ class _LiveRosterScreenState extends State<LiveRosterScreen> {
           final absent = (summary['absent'] is int)
               ? summary['absent'] as int
               : all
-                  .where((s) =>
-                      s['attendance_status']?.toString() == 'absent')
-                  .length;
-          final absentPct =
-              total == 0 ? 0 : ((absent * 100) / total).round();
+                    .where(
+                      (s) => s['attendance_status']?.toString() == 'absent',
+                    )
+                    .length;
+          final absentPct = total == 0 ? 0 : ((absent * 100) / total).round();
 
           final counts = <String, int>{};
           for (final s in all) {
@@ -195,10 +194,8 @@ class _LiveRosterScreenState extends State<LiveRosterScreen> {
               return false;
             }
             if (q.isEmpty) return true;
-            final name =
-                (s['student_name'] ?? '').toString().toLowerCase();
-            final code =
-                (s['student_code'] ?? '').toString().toLowerCase();
+            final name = (s['student_name'] ?? '').toString().toLowerCase();
+            final code = (s['student_code'] ?? '').toString().toLowerCase();
             return name.contains(q) || code.contains(q);
           }).toList();
 
@@ -217,9 +214,7 @@ class _LiveRosterScreenState extends State<LiveRosterScreen> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
-                          trStatus(
-                            (data['session_status'] ?? '-').toString(),
-                          ),
+                          trStatus((data['session_status'] ?? '-').toString()),
                           style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
@@ -249,23 +244,11 @@ class _LiveRosterScreenState extends State<LiveRosterScreen> {
                     const SizedBox(height: 10),
                     Row(
                       children: [
-                        _count(
-                          '${summary['present'] ?? 0}',
-                          tr('st_present'),
-                        ),
+                        _count('${summary['present'] ?? 0}', tr('st_present')),
                         _count('${summary['late'] ?? 0}', tr('st_late')),
-                        _count(
-                          '${summary['excused'] ?? 0}',
-                          tr('st_excused'),
-                        ),
-                        _count(
-                          '${summary['absent'] ?? 0}',
-                          tr('st_absent'),
-                        ),
-                        _count(
-                          '${summary['total'] ?? all.length}',
-                          tr('all'),
-                        ),
+                        _count('${summary['excused'] ?? 0}', tr('st_excused')),
+                        _count('${summary['absent'] ?? 0}', tr('st_absent')),
+                        _count('${summary['total'] ?? all.length}', tr('all')),
                       ],
                     ),
                   ],
@@ -296,10 +279,7 @@ class _LiveRosterScreenState extends State<LiveRosterScreen> {
                   children: [
                     _chip('all', '${tr('all')} (${all.length})'),
                     for (final e in counts.entries)
-                      _chip(
-                        e.key,
-                        '${trStatus(e.key)} (${e.value})',
-                      ),
+                      _chip(e.key, '${trStatus(e.key)} (${e.value})'),
                   ],
                 ),
               ),
@@ -307,16 +287,14 @@ class _LiveRosterScreenState extends State<LiveRosterScreen> {
                 child: all.isEmpty
                     ? AppEmpty(message: tr('no_roster'))
                     : visible.isEmpty
-                        ? AppEmpty(message: tr('no_filter'))
-                        : ListView.separated(
-                            padding: const EdgeInsets.all(16),
-                            itemCount: visible.length,
-                            separatorBuilder: (_, _) =>
-                                const SizedBox(height: 10),
-                            itemBuilder: (context, i) {
-                              final s = visible[i];
-                          final st =
-                              s['attendance_status']?.toString() ?? '-';
+                    ? AppEmpty(message: tr('no_filter'))
+                    : ListView.separated(
+                        padding: const EdgeInsets.all(16),
+                        itemCount: visible.length,
+                        separatorBuilder: (_, _) => const SizedBox(height: 10),
+                        itemBuilder: (context, i) {
+                          final s = visible[i];
+                          final st = s['attendance_status']?.toString() ?? '-';
                           final late = s['minutes_late'];
                           return AppCard(
                             padding: const EdgeInsets.symmetric(
@@ -343,9 +321,10 @@ class _LiveRosterScreenState extends State<LiveRosterScreen> {
                                 ),
                               ),
                               subtitle: Text(
-                                '${ltr(s['student_code'] ?? '')}'
-                                '${late is int && late > 0 ? ' • ${ltr(late)}' : ''}'
-                                ' • ${ltr(s['source'] ?? '')}'
+                                '${tr('student_id_l')}: ${ltr(s['student_id'] ?? s['student_code'] ?? '')}'
+                                '${s['level'] != null ? ' • ${tr('level_l')}: ${ltr(s['level'])}' : ''}'
+                                '${late is int && late > 0 ? ' • ${ltr(late)} ${tr('min_unit')}' : ''}'
+                                ' • ${trSource(s['source']?.toString() ?? '')}'
                                 ' • ${ltr(Format.time(s['attendance_timestamp']?.toString()))}',
                                 style: const TextStyle(fontSize: 12),
                               ),
@@ -383,7 +362,7 @@ class _LiveRosterScreenState extends State<LiveRosterScreen> {
   Widget _chip(String value, String label) {
     final selected = _filter == value;
     return Padding(
-      padding: const EdgeInsets.only(right: 8),
+      padding: const EdgeInsetsDirectional.only(end: 8),
       child: ChoiceChip(
         label: Text(label),
         selected: selected,

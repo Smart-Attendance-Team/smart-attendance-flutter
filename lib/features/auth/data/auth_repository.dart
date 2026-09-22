@@ -31,11 +31,9 @@ class AuthRepository {
     var role = _str(body, const ['role'], fallback: 'student');
     final embedded = body['user'];
     if (embedded is Map) {
-      role = _str(
-        Map<String, dynamic>.from(embedded),
-        const ['role'],
-        fallback: role,
-      );
+      role = _str(Map<String, dynamic>.from(embedded), const [
+        'role',
+      ], fallback: role);
     }
 
     var displayName = email.split('@').first;
@@ -69,11 +67,15 @@ class AuthRepository {
           final sid = p['student_id']?.toString();
           final code = p['student_code']?.toString();
           final sname = p['student_name']?.toString();
+          final level = p['level']?.toString();
           if (sid != null && sid.isNotEmpty) {
             await SessionManager.saveMeta(email, 'student_id', sid);
           }
           if (code != null && code.isNotEmpty) {
             await SessionManager.saveMeta(email, 'student_code', code);
+          }
+          if (level != null && level.isNotEmpty) {
+            await SessionManager.saveMeta(email, 'level', level);
           }
           if (sname != null && sname.isNotEmpty) {
             displayName = sname;

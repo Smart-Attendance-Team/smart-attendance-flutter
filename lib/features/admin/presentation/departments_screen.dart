@@ -24,23 +24,29 @@ class _DepartmentsScreenState extends State<DepartmentsScreen> {
   }
 
   /// Reload that never replaces the screen with an error page.
-  Future<void> _reload() async {
+  /// Returns true when fresh data arrived (for visible confirmation).
+  Future<bool> _reload() async {
     try {
       final fresh = await _api.getList('/admin/departments');
-      if (!mounted) return;
-      setState(() => _future = Future.value(fresh));
+      if (!mounted) return false;
+      setState(() {
+        _future = Future.value(fresh);
+      });
+      return true;
     } on ApiException catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(e.message)),
         );
       }
+      return false;
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(tr('cant_load'))),
         );
       }
+      return false;
     }
   }
 
@@ -94,13 +100,71 @@ class _DepartmentsScreenState extends State<DepartmentsScreen> {
     }
   }
 
+  Future<void> _edit(Map<String, dynamic> department) async {
+    final id = department['department_id'];
+    if (id is! num) return;
+    final name = TextEditingController(text: '${department['department_name'] ?? ''}');
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text(tr('edit_department')),
+        content: AppField(controller: name, label: tr('dept_name')),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(tr('cancel'))),
+          ElevatedButton(onPressed: () => Navigator.pop(context, true), child: Text(tr('save'))),
+        ],
+      ),
+    );
+    final value = name.text.trim();
+    name.dispose();
+    if (ok != true || value.isEmpty) return;
+    try {
+      await _api.patchMap('/admin/departments/${id.toInt()}', data: {'department_name': value});
+      if (!mounted) return;
+      await _reload();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(tr('saved_ok'))));
+    } on ApiException catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+    }
+  }
+
+  Future<void> _delete(Map<String, dynamic> department) async {
+    final id = department['department_id'];
+    if (id is! num) return;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text(tr('delete_department')),
+        content: Text(tr('delete_confirm_generic')),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(tr('cancel'))),
+          ElevatedButton(onPressed: () => Navigator.pop(context, true), child: Text(tr('delete'))),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      await _api.delete('/admin/departments/${id.toInt()}');
+      if (!mounted) return;
+      await _reload();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(tr('deleted_ok'))));
+    } on ApiException catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text(tr('departments')),
         actions: [
-          IconButton(onPressed: _reload, icon: const Icon(Icons.refresh)),
+          IconButton(
+            onPressed: () => refreshWithToast(context, _reload),
+            icon: const Icon(Icons.refresh),
+          ),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
@@ -172,6 +236,8 @@ class _DepartmentsScreenState extends State<DepartmentsScreen> {
                         ],
                       ),
                     ),
+                    IconButton(icon: const Icon(Icons.edit_outlined), tooltip: tr('edit'), onPressed: () => _edit(d)),
+                    IconButton(icon: const Icon(Icons.delete_outline, color: AppColors.error), tooltip: tr('delete'), onPressed: () => _delete(d)),
                   ],
                 ),
               );

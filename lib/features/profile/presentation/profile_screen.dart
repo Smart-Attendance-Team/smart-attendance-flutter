@@ -71,6 +71,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
           final p = await _api.get('/students/me');
           if (p.data is Map) {
             final m = Map<String, dynamic>.from(p.data as Map);
+            if (m['student_id'] != null) {
+              userId = '${m['student_id']}';
+            }
             if (m['student_code'] != null) {
               extra[tr('student_code_l')] = '${m['student_code']}';
             }
@@ -109,6 +112,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
           final p = await _api.get('/staff/me');
           if (p.data is Map) {
             final m = Map<String, dynamic>.from(p.data as Map);
+            if (m['staff_id'] != null) {
+              userId = '${m['staff_id']}';
+            }
             if (m['staff_type'] != null) {
               extra[tr('t_type')] = '${m['staff_type']}';
             }
@@ -133,8 +139,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _Stat(tr('timetable'), '${results[3].length}'),
         ];
       } else if (role == 'auditor') {
-        final logs = await _api.get('/audit-events',
-            queryParameters: const {'limit': 1});
+        final logs = await _api.get(
+          '/audit-events',
+          queryParameters: const {'limit': 1},
+        );
         final map = ApiClient.asMap(logs.data);
         var flags = '-';
         try {
@@ -159,6 +167,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  Future<bool> _reload() {
+    final future = _load();
+    setState(() {
+      _future = future;
+    });
+    return future.then((_) => true).catchError((_) => false);
+  }
+
   String get _roleLabel {
     switch (widget.userRole.toLowerCase()) {
       case 'lecturer':
@@ -177,14 +193,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(tr('profile'))),
+      appBar: AppBar(
+        title: Text(tr('profile')),
+        actions: [
+          IconButton(
+            onPressed: () => refreshWithToast(context, _reload),
+            icon: const Icon(Icons.refresh),
+          ),
+        ],
+      ),
       body: FutureBuilder<_ProfileData>(
         future: _future,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const AppLoading();
           }
-          final data = snapshot.data ??
+          final data =
+              snapshot.data ??
               const _ProfileData(email: '', userId: null, stats: []);
           return ListView(
             padding: const EdgeInsets.all(16),
@@ -235,8 +260,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     const Divider(height: 1, indent: 16, endIndent: 16),
                     ListTile(
                       leading: const Icon(Icons.badge_outlined),
-                      title: Text(tr('f_user_id')),
-                      subtitle: Text(data.userId ?? '-'),
+                      title: Text(
+                        widget.userRole.toLowerCase() == 'student'
+                            ? tr('student_id_l')
+                            : (widget.userRole.toLowerCase() == 'lecturer' ||
+                                      widget.userRole.toLowerCase() == 'ta'
+                                  ? tr('staff_id_l')
+                                  : tr('f_user_id')),
+                      ),
+                      subtitle: Text(
+                        data.userId == null ? '-' : ltr(data.userId),
+                      ),
                     ),
                     const Divider(height: 1, indent: 16, endIndent: 16),
                     ListTile(
@@ -260,8 +294,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 GridView.builder(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
-                  gridDelegate:
-                      const SliverGridDelegateWithFixedCrossAxisCount(
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 2,
                     mainAxisSpacing: 10,
                     crossAxisSpacing: 10,

@@ -26,8 +26,14 @@ class _CorrectionRequestsScreenState extends State<CorrectionRequestsScreen> {
     _future = _api.getList('/corrections/pending');
   }
 
-  void _reload() =>
-      setState(() => _future = _api.getList('/corrections/pending'));
+  /// Manual refresh with visible confirmation (see refreshWithToast).
+  Future<bool> _reload() {
+    final future = _api.getList('/corrections/pending');
+    setState(() {
+      _future = future;
+    });
+    return future.then((_) => true).catchError((_) => false);
+  }
 
   Future<void> _decide(int id, String decision) async {
     final reason = TextEditingController();
@@ -102,7 +108,10 @@ class _CorrectionRequestsScreenState extends State<CorrectionRequestsScreen> {
       appBar: AppBar(
         title: Text(tr('corr_rev')),
         actions: [
-          IconButton(onPressed: _reload, icon: const Icon(Icons.refresh)),
+          IconButton(
+            onPressed: () => refreshWithToast(context, _reload),
+            icon: const Icon(Icons.refresh),
+          ),
         ],
       ),
       body: FutureBuilder<List<dynamic>>(

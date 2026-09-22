@@ -24,7 +24,15 @@ class _MyAttendanceScreenState extends State<MyAttendanceScreen> {
     _future = _api.getList('/attendance/me');
   }
 
-  void _reload() => setState(() => _future = _api.getList('/attendance/me'));
+  /// Manual refresh: returns true when fresh data arrived, so the
+  /// caller can confirm visibly. Auto reloads call the loader directly.
+  Future<bool> _reload() {
+    final future = _api.getList('/attendance/me');
+    setState(() {
+      _future = future;
+    });
+    return future.then((_) => true).catchError((_) => false);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -32,7 +40,10 @@ class _MyAttendanceScreenState extends State<MyAttendanceScreen> {
       appBar: AppBar(
         title: Text(tr('my_att')),
         actions: [
-          IconButton(onPressed: _reload, icon: const Icon(Icons.refresh)),
+          IconButton(
+            onPressed: () => refreshWithToast(context, _reload),
+            icon: const Icon(Icons.refresh),
+          ),
         ],
       ),
       body: FutureBuilder<List<dynamic>>(
@@ -58,7 +69,7 @@ class _MyAttendanceScreenState extends State<MyAttendanceScreen> {
 
           final counts = <String, int>{};
           for (final r in all) {
-            final s = (r['attendance_status'] ?? 'unknown').toString();
+            final s = (r['attendance_status'] ?? '-').toString();
             counts[s] = (counts[s] ?? 0) + 1;
           }
           final visible = _filter == 'all'
@@ -106,7 +117,7 @@ class _MyAttendanceScreenState extends State<MyAttendanceScreen> {
                                         CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        '${ltr(r['course_code'] ?? '')} • ${ltr(r['course_name'] ?? 'Lecture')}',
+                                        '${ltr(r['course_code'] ?? '')} • ${ltr(r['course_name'] ?? tr('course_unknown'))}',
                                         style: const TextStyle(
                                           fontWeight: FontWeight.bold,
                                           fontSize: 14,
@@ -115,7 +126,7 @@ class _MyAttendanceScreenState extends State<MyAttendanceScreen> {
                                       const SizedBox(height: 4),
                                       Text(
                                         '${ltr(Format.dateShort(r['session_date']?.toString()))}'
-                                        '${late is int && late > 0 ? ' • ${ltr(late)}' : ''}'
+                                        '${late is int && late > 0 ? ' • ${ltr(late)} ${tr('min_unit')}' : ''}'
                                         ' • #${ltr(r['attendance_id'] ?? '-')}',
                                         style: const TextStyle(
                                           color: Color(0xFF64748B),
@@ -142,7 +153,7 @@ class _MyAttendanceScreenState extends State<MyAttendanceScreen> {
   Widget _chip(String value, String label) {
     final selected = _filter == value;
     return Padding(
-      padding: const EdgeInsets.only(right: 8),
+      padding: const EdgeInsetsDirectional.only(end: 8),
       child: ChoiceChip(
         label: Text(label),
         selected: selected,

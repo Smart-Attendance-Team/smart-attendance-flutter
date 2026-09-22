@@ -1,9 +1,9 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/date_symbol_data_local.dart';
-
 import 'app.dart';
 import 'core/l10n/app_locale.dart';
+import 'core/l10n/strings.dart';
 import 'core/network/api_client.dart';
 import 'core/storage/session_manager.dart';
 import 'features/auth/presentation/sign_in_screen.dart';
@@ -39,8 +39,8 @@ Future<void> main() async {
         // navigator key context is app-scoped, not tied to a disposed widget.
         // ignore: use_build_context_synchronously
         ScaffoldMessenger.of(ctx).showSnackBar(
-          const SnackBar(
-            content: Text('Something went wrong. Please try again.'),
+          SnackBar(
+            content: Text(tr('went_wrong')),
             behavior: SnackBarBehavior.floating,
           ),
         );

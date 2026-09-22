@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'core/l10n/app_locale.dart';
+import 'core/l10n/strings.dart';
 import 'core/network/api_client.dart';
 import 'core/theme/app_theme.dart';
 import 'features/auth/presentation/splash_screen.dart';
@@ -26,7 +27,7 @@ class CommunityAttendanceApp extends StatelessWidget {
       builder: (_, locale, _) => MaterialApp(
         debugShowCheckedModeBanner: false,
         navigatorKey: navigatorKey,
-        title: 'Smart Attendance',
+        title: tr('app_name'),
         theme: AppTheme.light(),
         locale: locale,
         supportedLocales: const [Locale('en'), Locale('ar')],

@@ -13,7 +13,8 @@ String tr(String key, [Map<String, String> params = const {}]) {
 String ltr(Object? value) => '\u2066${value ?? ''}\u2069';
 
 /// Translates server-side status codes; unknown values pass through.
-String trStatus(String status) {  const map = {
+String trStatus(String status) {
+  const map = {
     'present': 'st_present',
     'late': 'st_late',
     'absent': 'st_absent',
@@ -25,9 +26,40 @@ String trStatus(String status) {  const map = {
     'open': 'st_open',
     'closed': 'st_closed',
     'active': 'st_active',
+    'low_attendance': 'flag_low',
+    'many_correction_requests': 'flag_many',
   };
   final key = map[status.toLowerCase()];
   return key == null ? status : tr(key);
+}
+
+/// Translates weekday enum values from the API; unknown values pass through.
+String trDay(String day) {
+  const map = {
+    'saturday': 'day_saturday',
+    'sunday': 'day_sunday',
+    'monday': 'day_monday',
+    'tuesday': 'day_tuesday',
+    'wednesday': 'day_wednesday',
+    'thursday': 'day_thursday',
+    'friday': 'day_friday',
+  };
+  final key = map[day.toLowerCase()];
+  return key == null ? day : tr(key);
+}
+
+/// Translates room_type enum values; unknown values pass through.
+String trRoomType(String type) {
+  const map = {'lecture': 'room_lecture', 'lab': 'room_lab'};
+  final key = map[type.toLowerCase()];
+  return key == null ? type : tr(key);
+}
+
+/// Translates attendance source values; unknown values pass through.
+String trSource(String source) {
+  const map = {'qr': 'src_qr', 'manual': 'src_manual'};
+  final key = map[source.toLowerCase()];
+  return key == null ? source : tr(key);
 }
 
 const Map<String, String> _en = {
@@ -49,10 +81,67 @@ const Map<String, String> _en = {
   'confirm': 'Confirm',
   'create': 'Create',
   'save': 'Save',
+  'edit': 'Edit',
+  'delete': 'Delete',
   'open': 'Open',
   'filter': 'Filter',
   'logout_tip': 'Logout',
   'lang_tip': 'عربي / EN',
+  'went_wrong': 'Something went wrong. Please try again.',
+  'course_unknown': 'Lecture',
+  'room_lecture': 'Lecture hall',
+  'room_lab': 'Lab',
+  'src_qr': 'QR',
+  'src_manual': 'Manual',
+  'min_unit': 'min',
+  'room_id_l': 'Room ID',
+  'slot_l': 'Slot',
+  'course_l': 'Course',
+  'edit_student': 'Edit student',
+  'edit_staff': 'Edit staff member',
+  'active_l': 'Active',
+  'inactive': 'Inactive',
+  'enrollments': 'Enrollments',
+  'enrollments_sub': 'View and remove enrollments',
+  'unenroll': 'Unenroll',
+  'unenroll_confirm':
+      'Remove this enrollment? Past attendance records are kept.',
+  'no_enrollments': 'No enrollments yet',
+  'tab_enroll': 'Enroll',
+  'tab_assign': 'Assign',
+  'tab_enrollments': 'Enrollments',
+  'search_hint': 'Search…',
+  'no_results': 'No matching results',
+  'sort_new': 'Newest first',
+  'sort_old': 'Oldest first',
+  'no_change': 'No change',
+  'dept_pick': 'Department (optional)',
+  'student_sessions': 'My schedule',
+  'student_sessions_sub': 'Weekly timetable of your sections',
+  'no_student_sessions': 'No scheduled sessions yet',
+  'students': 'Students',
+  'students_sub': 'Accounts created on this device',
+  'lecturers': 'Lecturers & TAs',
+  'lecturers_sub': 'Accounts created on this device',
+  'no_students': 'No students yet — create them in People',
+  'no_staff': 'No staff yet — create them in People',
+  'dir_hint':
+      'Shows accounts created on this device. Full database listing needs server endpoints.',
+  'pick_student': 'Choose student',
+  'pick_staff': 'Choose staff member',
+  'pick_section': 'Choose section',
+  'pick_room': 'Choose room',
+  'manual_entry': 'Enter ID manually',
+  'dir_empty_pick': 'Nothing saved yet — create accounts in People first',
+  'flag_low': 'Low attendance',
+  'flag_many': 'Many corrections',
+  'day_saturday': 'Saturday',
+  'day_sunday': 'Sunday',
+  'day_monday': 'Monday',
+  'day_tuesday': 'Tuesday',
+  'day_wednesday': 'Wednesday',
+  'day_thursday': 'Thursday',
+  'day_friday': 'Friday',
 
   'err_email_req': 'Email is required',
   'err_email_bad': 'Enter a valid email',
@@ -73,6 +162,7 @@ const Map<String, String> _en = {
 
   'role_student': 'Student',
   'role_lecturer': 'Lecturer',
+  'role_ta': 'Teaching assistant',
   'role_admin': 'Admin',
   'role_auditor': 'Auditor',
 
@@ -135,7 +225,8 @@ const Map<String, String> _en = {
   'corr_rev_sub': 'Review student requests',
   'ask_session': 'Live roster',
   'open_session': 'Open a session',
-  'open_hint': "Only on the slot weekday, inside its time range, and for your assigned sections.",
+  'open_hint':
+      "Only on the slot weekday, inside its time range, and for your assigned sections.",
   'slot_id': 'Timetable slot ID',
   'open_btn': 'Open Session',
   'join_session': 'Join a running session',
@@ -218,7 +309,8 @@ const Map<String, String> _en = {
   'sec_f': 'Section ID',
   'stu_f': 'Student code',
   'no_rows': 'No rows for these filters',
-  'rep_total': 'Total {t} • Present {p} • Late {l} • Excused {e} • Absent {a} • Rate {r}%',
+  'rep_total':
+      'Total {t} • Present {p} • Late {l} • Excused {e} • Absent {a} • Rate {r}%',
   'building': 'Building (optional)',
   'capacity': 'Capacity (optional)',
   'dept_id': 'Department ID (optional)',
@@ -230,11 +322,13 @@ const Map<String, String> _en = {
   'record_n': 'Record #{id}',
   'evidence_url': 'Evidence URL (optional)',
   'my_slots': 'My slots',
-  'my_slots_hint': 'Slots of your assigned sections. Open today’s slot to show its QR.',
+  'my_slots_hint':
+      'Slots of your assigned sections. Open today’s slot to show its QR.',
   'today': 'Today',
   'open_qr': 'Open QR',
   'no_slot_session': 'No session yet',
-  'r_manual': 'The lecturer already set your status manually — a scan cannot change it.',
+  'r_manual':
+      'The lecturer already set your status manually — a scan cannot change it.',
   'departments': 'Departments',
   'departments_sub': 'Academic departments',
   'new_department': 'New department',
@@ -242,7 +336,8 @@ const Map<String, String> _en = {
   'no_departments': 'No departments yet',
   'edit_slot': 'Edit slot',
   'delete_slot': 'Delete slot',
-  'delete_confirm': 'Delete this slot? Slots that ever had a session cannot be deleted.',
+  'delete_confirm':
+      'Delete this slot? Slots that ever had a session cannot be deleted.',
   'deleted_ok': 'Deleted successfully',
   'student_code_l': 'Student code',
   'level_l': 'Level',
@@ -273,10 +368,12 @@ const Map<String, String> _en = {
   'tap_qr': 'Tap to open QR / roster',
   'my_subjects': 'My subjects',
   'sessions_n': 'Sessions',
+  'room': 'Room',
   'upcoming_na': 'Upcoming schedule is not provided by the server yet',
   'search_roster': 'Search name or code',
   'abs_rate': 'Absence {p}%',
-  'roster_hint': 'Make sure you are logged in as the lecturer who opened this session, assigned to its section, and the session ID is correct.',
+  'roster_hint':
+      'Make sure you are logged in as the lecturer who opened this session, assigned to its section, and the session ID is correct.',
   'h_course_id': 'Copy it from Courses (ID under each course)',
   'h_section_id': 'Copy it from Sections (ID under each section)',
   'h_room_id': 'Copy it from Rooms & Labs (ID under each room)',
@@ -284,6 +381,7 @@ const Map<String, String> _en = {
   'h_student_id': 'Shown once right after creating the student',
   'h_slot_id': 'Copy it from Timetable (ID on each slot)',
   'h_session_id': 'Shown after opening the session',
+  'session_example': 'e.g. 12',
   'h_attendance_id': 'Copy it from My Attendance (# under each record)',
 
   // auditor
@@ -298,8 +396,10 @@ const Map<String, String> _en = {
   'no_flags': 'No flags — everything looks healthy',
 
   // api errors
-  'e_timeout': 'Server timeout. Check that the backend is running and reachable.',
-  'e_conn': 'Cannot reach {url}. Emulator uses 10.0.2.2, a real device needs the PC LAN IP on the SAME Wi-Fi.',
+  'e_timeout':
+      'Server timeout. Check that the backend is running and reachable.',
+  'e_conn':
+      'Cannot reach {url}. Emulator uses 10.0.2.2, a real device needs the PC LAN IP on the SAME Wi-Fi.',
   'e_bad': 'Invalid request data.',
   'e_login': 'Email or password is incorrect.',
   'e_forbidden': 'Your role has no access to this.',
@@ -311,6 +411,7 @@ const Map<String, String> _en = {
   'e_no_token': 'Login succeeded but no token was returned.',
   'cant_load': 'Unable to load data',
   'created_ok': 'Created successfully',
+  'updated_ok': 'Updated',
   'my_id': 'My ID',
   'copy': 'Copy',
   'copied': 'Copied',
@@ -330,6 +431,18 @@ const Map<String, String> _en = {
   'enter_id_hint': 'Enter the ID the admin gave you',
   'save_ids_hint': 'Save these IDs — you will need them:',
   'saved_ok': 'Saved successfully',
+  'edit_course': 'Edit course',
+  'delete_course': 'Delete course',
+  'edit_department': 'Edit department',
+  'delete_department': 'Delete department',
+  'edit_room': 'Edit room',
+  'delete_room': 'Delete room',
+  'edit_section': 'Edit section',
+  'delete_section': 'Delete section',
+  'delete_confirm_generic': 'Are you sure you want to delete this item?',
+  'people_list': 'List',
+  'no_people': 'No records yet',
+  'directory_endpoint_hint': 'The server does not provide this directory yet.',
   'decision_saved': 'Decision saved',
 };
 
@@ -352,10 +465,66 @@ const Map<String, String> _ar = {
   'confirm': 'تأكيد',
   'create': 'إنشاء',
   'save': 'حفظ',
+  'edit': 'تعديل',
+  'delete': 'حذف',
   'open': 'فتح',
   'filter': 'بحث',
   'logout_tip': 'تسجيل الخروج',
   'lang_tip': 'EN / عربي',
+  'went_wrong': 'حدث خطأ ما. حاول مرة أخرى.',
+  'course_unknown': 'محاضرة',
+  'room_lecture': 'قاعة محاضرات',
+  'room_lab': 'معمل',
+  'src_qr': 'QR',
+  'src_manual': 'يدوي',
+  'min_unit': 'د',
+  'room_id_l': 'رقم القاعة',
+  'slot_l': 'موعد',
+  'course_l': 'المادة',
+  'edit_student': 'تعديل الطالب',
+  'edit_staff': 'تعديل العضو',
+  'active_l': 'نشط',
+  'inactive': 'غير نشط',
+  'enrollments': 'التسجيلات',
+  'enrollments_sub': 'عرض التسجيلات وإلغاؤها',
+  'unenroll': 'إلغاء التسجيل',
+  'unenroll_confirm': 'إلغاء هذا التسجيل؟ سجلات الحضور السابقة تبقى كما هي.',
+  'no_enrollments': 'لا توجد تسجيلات بعد',
+  'tab_enroll': 'تسجيل',
+  'tab_assign': 'إسناد',
+  'tab_enrollments': 'التسجيلات',
+  'search_hint': 'ابحث…',
+  'no_results': 'لا توجد نتائج مطابقة',
+  'sort_new': 'الأحدث أولاً',
+  'sort_old': 'الأقدم أولاً',
+  'no_change': 'بدون تغيير',
+  'dept_pick': 'القسم (اختياري)',
+  'student_sessions': 'جدولي الدراسي',
+  'student_sessions_sub': 'الجدول الأسبوعي لسكاشنك',
+  'no_student_sessions': 'لا توجد حصص مجدولة بعد',
+  'students': 'الطلاب',
+  'students_sub': 'الحسابات المنشأة على هذا الجهاز',
+  'lecturers': 'المحاضرون والمعيدون',
+  'lecturers_sub': 'الحسابات المنشأة على هذا الجهاز',
+  'no_students': 'لا يوجد طلاب بعد — أنشئهم من الأشخاص',
+  'no_staff': 'لا يوجد أعضاء بعد — أنشئهم من الأشخاص',
+  'dir_hint':
+      'يعرض الحسابات المنشأة على هذا الجهاز. للقاعدة الكاملة يلزم endpoints من السيرفر.',
+  'pick_student': 'اختر الطالب',
+  'pick_staff': 'اختر العضو',
+  'pick_section': 'اختر السكشن',
+  'pick_room': 'اختر القاعة',
+  'manual_entry': 'إدخال الرقم يدوياً',
+  'dir_empty_pick': 'لا يوجد محفوظ بعد — أنشئ الحسابات من الأشخاص أولاً',
+  'flag_low': 'حضور منخفض',
+  'flag_many': 'طلبات تصحيح كثيرة',
+  'day_saturday': 'السبت',
+  'day_sunday': 'الأحد',
+  'day_monday': 'الاثنين',
+  'day_tuesday': 'الثلاثاء',
+  'day_wednesday': 'الأربعاء',
+  'day_thursday': 'الخميس',
+  'day_friday': 'الجمعة',
 
   'err_email_req': 'البريد الإلكتروني مطلوب',
   'err_email_bad': 'أدخل بريداً إلكترونياً صحيحاً',
@@ -376,6 +545,7 @@ const Map<String, String> _ar = {
 
   'role_student': 'طالب',
   'role_lecturer': 'محاضر',
+  'role_ta': 'معيد',
   'role_admin': 'مدير',
   'role_auditor': 'مدقق',
 
@@ -517,7 +687,8 @@ const Map<String, String> _ar = {
   'sec_f': 'رقم السكشن',
   'stu_f': 'كود الطالب',
   'no_rows': 'لا توجد صفوف لهذه الفلاتر',
-  'rep_total': 'الإجمالي {t} • حاضر {p} • متأخر {l} • معذور {e} • غائب {a} • النسبة {r}%',
+  'rep_total':
+      'الإجمالي {t} • حاضر {p} • متأخر {l} • معذور {e} • غائب {a} • النسبة {r}%',
   'building': 'المبنى (اختياري)',
   'capacity': 'السعة (اختياري)',
   'dept_id': 'رقم القسم (اختياري)',
@@ -541,7 +712,8 @@ const Map<String, String> _ar = {
   'no_departments': 'لا توجد أقسام بعد',
   'edit_slot': 'تعديل الموعد',
   'delete_slot': 'حذف الموعد',
-  'delete_confirm': 'حذف هذا الموعد؟ الموعد الذي فُتح له سيشن من قبل لا يمكن حذفه.',
+  'delete_confirm':
+      'حذف هذا الموعد؟ الموعد الذي فُتح له سيشن من قبل لا يمكن حذفه.',
   'deleted_ok': 'تم الحذف بنجاح',
   'student_code_l': 'كود الطالب',
   'level_l': 'المستوى',
@@ -572,10 +744,12 @@ const Map<String, String> _ar = {
   'tap_qr': 'دوس لفتح الـ QR / الكشف',
   'my_subjects': 'موادي الدراسية',
   'sessions_n': 'السيشنات',
+  'room': 'القاعة',
   'upcoming_na': 'جدول المواعيد القادمة غير متاح من السيرفر حالياً',
   'search_roster': 'ابحث بالاسم أو الكود',
   'abs_rate': 'نسبة الغياب {p}%',
-  'roster_hint': 'تأكد أنك داخل بنفس حساب المحاضر الذي فتح هذا السيشن، وأنك مسند على السكشن الخاص به، ورقم السيشن صحيح.',
+  'roster_hint':
+      'تأكد أنك داخل بنفس حساب المحاضر الذي فتح هذا السيشن، وأنك مسند على السكشن الخاص به، ورقم السيشن صحيح.',
   'h_course_id': 'انسخه من الكورسات (الرقم تحت كل كورس)',
   'h_section_id': 'انسخه من السكاشن (الرقم تحت كل سكشن)',
   'h_room_id': 'انسخه من القاعات (الرقم تحت كل قاعة)',
@@ -583,6 +757,7 @@ const Map<String, String> _ar = {
   'h_student_id': 'بيظهر مرة واحدة بعد إنشاء الطالب مباشرة',
   'h_slot_id': 'انسخه من الجدول الدراسي (الرقم على كل موعد)',
   'h_session_id': 'بيظهر بعد فتح السيشن',
+  'session_example': 'مثال: 12',
   'h_attendance_id': 'انسخه من حضوري (# تحت كل سجل)',
 
   'aud_sub': 'متابعة التغييرات وإشارات الخطر (قراءة فقط).',
@@ -596,7 +771,8 @@ const Map<String, String> _ar = {
   'no_flags': 'لا توجد إشارات — كل شيء سليم',
 
   'e_timeout': 'انتهت مهلة السيرفر. تأكد أنه يعمل ويمكن الوصول إليه.',
-  'e_conn': 'تعذر الوصول إلى {url}. الـ emulator يستخدم 10.0.2.2، والموبايل الحقيقي يحتاج IP الجهاز على نفس الواي فاي.',
+  'e_conn':
+      'تعذر الوصول إلى {url}. الـ emulator يستخدم 10.0.2.2، والموبايل الحقيقي يحتاج IP الجهاز على نفس الواي فاي.',
   'e_bad': 'بيانات الطلب غير صالحة.',
   'e_login': 'البريد أو كلمة المرور غير صحيحة.',
   'e_forbidden': 'دورك لا يملك صلاحية لهذا.',
@@ -608,6 +784,7 @@ const Map<String, String> _ar = {
   'e_no_token': 'نجح الدخول لكن لم يرجع السيرفر توكن.',
   'cant_load': 'تعذر تحميل البيانات',
   'created_ok': 'تم الإنشاء بنجاح',
+  'updated_ok': 'تم التحديث',
   'my_id': 'رقمي التعريفي',
   'copy': 'نسخ',
   'copied': 'تم النسخ',
@@ -627,5 +804,17 @@ const Map<String, String> _ar = {
   'enter_id_hint': 'أدخل الرقم الذي أعطاه لك المدير',
   'save_ids_hint': 'احفظ هذه الأرقام — ستحتاجها بعد ذلك:',
   'saved_ok': 'تم الحفظ بنجاح',
+  'edit_course': 'تعديل المادة',
+  'delete_course': 'حذف المادة',
+  'edit_department': 'تعديل القسم',
+  'delete_department': 'حذف القسم',
+  'edit_room': 'تعديل القاعة',
+  'delete_room': 'حذف القاعة',
+  'edit_section': 'تعديل السكشن',
+  'delete_section': 'حذف السكشن',
+  'delete_confirm_generic': 'هل أنت متأكد من حذف هذا العنصر؟',
+  'people_list': 'القائمة',
+  'no_people': 'لا توجد بيانات بعد',
+  'directory_endpoint_hint': 'السيرفر لا يوفر قائمة الأشخاص حتى الآن.',
   'decision_saved': 'تم حفظ القرار',
 };

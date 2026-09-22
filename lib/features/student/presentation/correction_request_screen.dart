@@ -40,6 +40,14 @@ class _CorrectionRequestScreenState extends State<CorrectionRequestScreen> {
     super.dispose();
   }
 
+  Future<bool> _refreshMine() {
+    final future = _api.getList('/corrections/mine');
+    setState(() {
+      _mine = future;
+    });
+    return future.then((_) => true).catchError((_) => false);
+  }
+
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _sending = true);
@@ -59,7 +67,9 @@ class _CorrectionRequestScreenState extends State<CorrectionRequestScreen> {
         SnackBar(content: Text(tr('req_sent'))),
       );
       _reason.clear();
-      setState(() => _mine = _api.getList('/corrections/mine'));
+      setState(() {
+        _mine = _api.getList('/corrections/mine');
+      });
     } on ApiException catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -80,7 +90,15 @@ class _CorrectionRequestScreenState extends State<CorrectionRequestScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(tr('corr'))),
+      appBar: AppBar(
+        title: Text(tr('corr')),
+        actions: [
+          IconButton(
+            onPressed: () => refreshWithToast(context, _refreshMine),
+            icon: const Icon(Icons.refresh),
+          ),
+        ],
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(

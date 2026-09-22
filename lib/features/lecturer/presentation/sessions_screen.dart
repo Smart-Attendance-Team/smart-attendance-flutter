@@ -44,13 +44,18 @@ class _SessionsScreenState extends State<SessionsScreen> {
 
   Future<List<Map<String, dynamic>>> _loadSlots() async {
     final list = await _api.getList('/sessions/my-slots');
-    return list
-        .whereType<Map>()
-        .map(Map<String, dynamic>.from)
-        .toList();
+    return list.whereType<Map>().map(Map<String, dynamic>.from).toList();
   }
 
-  void _reload() => setState(() => _slotsFuture = _loadSlots());
+  /// Reload that the pull-to-refresh indicator actually waits for.
+  /// Returns true when fresh data arrived (for visible confirmation).
+  Future<bool> _reload() {
+    final future = _loadSlots();
+    setState(() {
+      _slotsFuture = future;
+    });
+    return future.then((_) => true).catchError((_) => false);
+  }
 
   Future<void> _open(int slotId) async {
     setState(() => _opening.add(slotId));
@@ -94,9 +99,9 @@ class _SessionsScreenState extends State<SessionsScreen> {
       }
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(tr('cant_load'))),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(tr('cant_load'))));
       }
     } finally {
       if (mounted) setState(() => _opening.remove(slotId));
@@ -116,20 +121,20 @@ class _SessionsScreenState extends State<SessionsScreen> {
       appBar: AppBar(
         title: Text(tr('sessions')),
         actions: [
-          IconButton(onPressed: _reload, icon: const Icon(Icons.refresh)),
+          IconButton(
+            onPressed: () => refreshWithToast(context, _reload),
+            icon: const Icon(Icons.refresh),
+          ),
         ],
       ),
       body: RefreshIndicator(
-        onRefresh: () async => _reload(),
+        onRefresh: _reload,
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
             Text(
               tr('my_slots_hint'),
-              style: const TextStyle(
-                color: AppColors.textGrey,
-                fontSize: 13,
-              ),
+              style: const TextStyle(color: AppColors.textGrey, fontSize: 13),
             ),
             const SizedBox(height: 12),
             FutureBuilder<List<Map<String, dynamic>>>(
@@ -156,38 +161,35 @@ class _SessionsScreenState extends State<SessionsScreen> {
                   physics: const NeverScrollableScrollPhysics(),
                   itemCount: slots.length,
                   separatorBuilder: (_, _) => const SizedBox(height: 10),
-                  itemBuilder: (context, i) =>
-                      _SlotCard(
-                        slot: slots[i],
-                        opening: _opening.contains(
-                          Format.asInt(slots[i]['slot_id']),
-                        ),
-                        onOpen: () {
-                          final sid = Format.asInt(slots[i]['slot_id']);
-                          if (sid != null) _open(sid);
-                        },
-                        onQr: () {
-                          final sessionId =
-                              slots[i]['session_id']?.toString();
-                          if (sessionId != null) {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => ActiveSessionScreen(
-                                  sessionId: sessionId,
-                                  sessionTitle:
-                                      '${tr('sessions')} #${ltr(sessionId)}',
-                                ),
-                              ),
-                            ).then((_) => _reload());
-                          }
-                        },
-                        onRoster: () {
-                          final sessionId =
-                              slots[i]['session_id']?.toString();
-                          if (sessionId != null) _openRoster(sessionId);
-                        },
-                      ),
+                  itemBuilder: (context, i) => _SlotCard(
+                    slot: slots[i],
+                    opening: _opening.contains(
+                      Format.asInt(slots[i]['slot_id']),
+                    ),
+                    onOpen: () {
+                      final sid = Format.asInt(slots[i]['slot_id']);
+                      if (sid != null) _open(sid);
+                    },
+                    onQr: () {
+                      final sessionId = slots[i]['session_id']?.toString();
+                      if (sessionId != null) {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => ActiveSessionScreen(
+                              sessionId: sessionId,
+                              sessionTitle:
+                                  '${tr('sessions')} #${ltr(sessionId)}',
+                            ),
+                          ),
+                        ).then((_) => _reload());
+                      }
+                    },
+                    onRoster: () {
+                      final sessionId = slots[i]['session_id']?.toString();
+                      if (sessionId != null) _openRoster(sessionId);
+                    },
+                  ),
                 );
               },
             ),
@@ -209,7 +211,7 @@ class _SessionsScreenState extends State<SessionsScreen> {
                   AppField(
                     controller: _roster,
                     label: tr('nm_session'),
-                    hint: 'e.g. 12',
+                    hint: tr('session_example'),
                     helper: tr('h_session_id'),
                     keyboardType: TextInputType.number,
                     inputFormatters: [FilteringTextInputFormatter.digitsOnly],
@@ -223,9 +225,9 @@ class _SessionsScreenState extends State<SessionsScreen> {
                     onPressed: () {
                       final v = _roster.text.trim();
                       if (v.isEmpty) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text(tr('need_sid'))),
-                        );
+                        ScaffoldMessenger.of(
+                          context,
+                        ).showSnackBar(SnackBar(content: Text(tr('need_sid'))));
                         return;
                       }
                       _openRoster(v);
@@ -262,8 +264,7 @@ class _SlotCard extends StatelessWidget {
     final sessionId = slot['session_id']?.toString();
     final sessionStatus = slot['session_status']?.toString();
     final isToday = slot['is_today'] == true;
-    final hasOpenSession =
-        sessionId != null && sessionStatus == 'open';
+    final hasOpenSession = sessionId != null && sessionStatus == 'open';
 
     return AppCard(
       child: Column(
@@ -304,17 +305,11 @@ class _SlotCard extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             '${slot['section_name'] ?? ''} • ${slot['room_name'] ?? ''}',
-            style: const TextStyle(
-              color: AppColors.textGrey,
-              fontSize: 13,
-            ),
+            style: const TextStyle(color: AppColors.textGrey, fontSize: 13),
           ),
           Text(
-            '${ltr(slot['day_of_week'] ?? '')} • ${ltr(slot['start_time'] ?? '')} – ${ltr(slot['end_time'] ?? '')} • Slot ${ltr(slot['slot_id'] ?? '-')}',
-            style: const TextStyle(
-              color: AppColors.textGrey,
-              fontSize: 12,
-            ),
+            '${ltr(trDay(slot['day_of_week'] ?? ''))} • ${ltr(slot['start_time'] ?? '')} – ${ltr(slot['end_time'] ?? '')} • ${tr('slot_l')} ${ltr(slot['slot_id'] ?? '-')}',
+            style: const TextStyle(color: AppColors.textGrey, fontSize: 12),
           ),
           if (sessionId != null) ...[
             const SizedBox(height: 6),
@@ -389,10 +384,7 @@ class _HistoryCard extends StatelessWidget {
               const SizedBox(height: 4),
               Text(
                 tr('tap_qr'),
-                style: const TextStyle(
-                  color: Color(0xFF64748B),
-                  fontSize: 12,
-                ),
+                style: const TextStyle(color: Color(0xFF64748B), fontSize: 12),
               ),
               const SizedBox(height: 8),
               if (snapshot.connectionState == ConnectionState.waiting)

@@ -69,7 +69,13 @@ class _ReportsScreenState extends State<ReportsScreen> {
     return f;
   }
 
-  void _apply() => setState(() => _future = _load(_filters()));
+  Future<bool> _apply() {
+    final future = _load(_filters());
+    setState(() {
+      _future = future;
+    });
+    return future.then((_) => true).catchError((_) => false);
+  }
 
   /// GET /reports/attendance/export?format=csv with the same filters,
   /// saved to a temp file and shared via the system sheet.
@@ -196,7 +202,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 AppButton(
                   label: tr('filter'),
                   icon: Icons.search_rounded,
-                  onPressed: _apply,
+                  onPressed: () => refreshWithToast(context, _apply),
                 ),
               ],
             ),
@@ -287,7 +293,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                       ),
                                       Text(
                                         '${ltr(r['course_code'] ?? '')} • ${ltr(r['student_code'] ?? '')} • ${ltr(Format.dateShort(r['session_date']?.toString()))}'
-                                        '${(r['minutes_late'] is int && (r['minutes_late'] as int) > 0) ? ' • ${ltr(r['minutes_late'])}' : ''} • ${ltr(r['source'] ?? '')}',
+                                        '${(r['minutes_late'] is int && (r['minutes_late'] as int) > 0) ? ' • ${ltr(r['minutes_late'])} ${tr('min_unit')}' : ''} • ${trSource(r['source']?.toString() ?? '')}',
                                         style: const TextStyle(
                                           color: AppColors.textGrey,
                                           fontSize: 12,

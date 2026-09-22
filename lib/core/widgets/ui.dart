@@ -391,7 +391,7 @@ class HeaderStat extends StatelessWidget {
   Widget build(BuildContext context) {
     return Expanded(
       child: Container(
-        margin: const EdgeInsets.only(right: 8),
+        margin: const EdgeInsetsDirectional.only(end: 8),
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
           color: Colors.white.withValues(alpha: 0.16),
@@ -540,8 +540,26 @@ class SectionBar extends StatelessWidget {
 }
 
 // --------------------------------------------------------------- logout --
-Future<void> logout(BuildContext context) async {
-  ApiClient.demoMode = false;
+/// Runs a manual refresh and always confirms visibly, so the user can
+/// tell the button did something even when the data is unchanged
+/// (e.g. instant demo data or an already-fresh server).
+Future<void> refreshWithToast(
+  BuildContext context,
+  Future<void> Function() reload,
+) async {
+  await reload();
+  if (context.mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(tr('updated_ok')),
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 1),
+      ),
+    );
+  }
+}
+
+Future<void> logout(BuildContext context) async {  ApiClient.demoMode = false;
   await SessionManager.clear();
   if (context.mounted) {
     Navigator.pushAndRemoveUntil(

@@ -46,7 +46,13 @@ class _FlagsScreenState extends State<FlagsScreen> {
     return ApiClient.asMap(res.data);
   }
 
-  void _reload() => setState(() => _future = _load());
+  Future<bool> _reload() {
+    final future = _load();
+    setState(() {
+      _future = future;
+    });
+    return future.then((_) => true).catchError((_) => false);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -54,7 +60,10 @@ class _FlagsScreenState extends State<FlagsScreen> {
       appBar: AppBar(
         title: Text(tr('flags')),
         actions: [
-          IconButton(onPressed: _reload, icon: const Icon(Icons.refresh)),
+          IconButton(
+            onPressed: () => refreshWithToast(context, _reload),
+            icon: const Icon(Icons.refresh),
+          ),
         ],
       ),
       body: Column(
@@ -95,7 +104,7 @@ class _FlagsScreenState extends State<FlagsScreen> {
                 AppButton(
                   label: tr('apply'),
                   icon: Icons.tune_rounded,
-                  onPressed: _reload,
+                  onPressed: () => refreshWithToast(context, _reload),
                 ),
               ],
             ),
