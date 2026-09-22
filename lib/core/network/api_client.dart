@@ -166,6 +166,33 @@ class ApiClient {
     }
   }
 
+  /// POST a raw CSV body (used by POST /admin/imports/students).
+  Future<Map<String, dynamic>> postCsv(
+    String path,
+    String csv, {
+    Map<String, dynamic>? queryParameters,
+  }) async {
+    if (demoMode) {
+      return {
+        'total': 1,
+        'created': 1,
+        'rejected': 0,
+        'rejected_rows': [],
+      };
+    }
+    try {
+      final res = await _dio.post(
+        path,
+        data: csv,
+        queryParameters: queryParameters,
+        options: Options(contentType: 'text/csv'),
+      );
+      return asMap(res.data);
+    } on DioException catch (e) {
+      throw mapError(e);
+    }
+  }
+
   Future<void> delete(String path) async {
     if (demoMode) return;
     try {
@@ -180,6 +207,9 @@ class ApiClient {
   static dynamic _demoBody(String path) {
     if (path == '/health') return {'status': 'ok'};
     if (path == '/me') return {'userId': 1, 'role': 'student'};
+    if (path.endsWith('/qr')) {
+      return {'token': 'DEMO-QR-TOKEN', 'expires_in_seconds': 20};
+    }
     if (path.endsWith('/roster')) {
       return {
         'session_id': 1,
@@ -219,8 +249,63 @@ class ApiClient {
         ],
       };
     }
-    if (path == '/flags') {
+    if (path == '/sessions/my-slots') {
+      return [
+        {
+          'slot_id': 5,
+          'course_code': 'CS101',
+          'course_name': 'Intro to CS',
+          'section_id': 2,
+          'section_name': 'Section 1',
+          'room_name': 'Hall A',
+          'day_of_week': 'Monday',
+          'start_time': '08:00',
+          'end_time': '10:00',
+          'session_id': 18,
+          'session_status': 'open',
+          'is_today': true,
+        },
+        {
+          'slot_id': 6,
+          'course_code': 'CS102',
+          'course_name': 'Data Structures',
+          'section_id': 3,
+          'section_name': 'Section 2',
+          'room_name': 'Lab 1',
+          'day_of_week': 'Wednesday',
+          'start_time': '10:00',
+          'end_time': '12:00',
+          'session_id': null,
+          'session_status': null,
+          'is_today': false,
+        },
+      ];
+    }
+    if (path == '/students/me') {
       return {
+        'student_id': 7,
+        'student_code': 'S1001',
+        'student_name': 'Demo Student',
+        'email': 'student@test.com',
+        'level': 2,
+        'department_name': 'Computer Science',
+      };
+    }
+    if (path == '/staff/me') {
+      return {
+        'staff_id': 4,
+        'staff_name': 'Demo Lecturer',
+        'staff_type': 'lecturer',
+        'email': 'lecturer@test.com',
+        'department_name': 'Computer Science',
+      };
+    }
+    if (path == '/admin/departments') {
+      return [
+        {'department_id': 1, 'department_name': 'Computer Science'},
+      ];
+    }
+    if (path == '/flags') {      return {
         'available': true,
         'count': 1,
         'flags': [
@@ -350,6 +435,26 @@ class ApiClient {
     return {};
   }
 
+  /// GET a raw CSV export (used by GET /reports/attendance/export).
+  Future<String> getCsv(
+    String path, {
+    Map<String, dynamic>? queryParameters,
+  }) async {
+    if (demoMode) {
+      return 'course_code,student_code,attendance_status\nCS101,S1001,present\n';
+    }
+    try {
+      final res = await _dio.get(
+        path,
+        queryParameters: queryParameters,
+        options: Options(responseType: ResponseType.plain),
+      );
+      return res.data?.toString() ?? '';
+    } on DioException catch (e) {
+      throw mapError(e);
+    }
+  }
+
   // ---------------------------------------------------------- parsing --
   static List<dynamic> asList(dynamic data) {
     if (data is List) return data;
@@ -448,6 +553,13 @@ class ApiClient {
           data: e.response?.data,
         );
       case 409:
+        if (msg == 'manually_recorded') {
+          return ApiException(
+            l10n.tr('r_manual'),
+            statusCode: status,
+            data: e.response?.data,
+          );
+        }
         return ApiException(
           msg ?? l10n.tr('e_409'),
           statusCode: status,

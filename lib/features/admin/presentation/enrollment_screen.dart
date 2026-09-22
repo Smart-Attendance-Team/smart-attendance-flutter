@@ -20,6 +20,7 @@ class _EnrollmentScreenState extends State<EnrollmentScreen> {
   final _section = TextEditingController();
   final _staff = TextEditingController();
   final _staffSection = TextEditingController();
+  var _staffRole = 'lecturer';
   bool _busy = false;
 
   @override
@@ -82,7 +83,7 @@ class _EnrollmentScreenState extends State<EnrollmentScreen> {
     try {
       await _api.postMap(
         '/admin/sections/$sec/staff',
-        data: {'staff_id': staffId, 'staff_role': 'lecturer'},
+        data: {'staff_id': staffId, 'staff_role': _staffRole},
       );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -182,6 +183,24 @@ class _EnrollmentScreenState extends State<EnrollmentScreen> {
                   keyboardType: TextInputType.number,
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                   prefixIcon: Icons.group_work_outlined,
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  initialValue: _staffRole,
+                  decoration:
+                      InputDecoration(labelText: tr('staff_role_l')),
+                  items: [
+                    DropdownMenuItem(
+                      value: 'lecturer',
+                      child: Text(tr('role_lecturer')),
+                    ),
+                    const DropdownMenuItem(
+                      value: 'TA',
+                      child: Text('TA'),
+                    ),
+                  ],
+                  onChanged: (v) =>
+                      setState(() => _staffRole = v ?? 'lecturer'),
                 ),
                 const SizedBox(height: 12),
                 AppButton(

@@ -60,6 +60,59 @@ class AuthRepository {
       // Profile is best-effort; login already succeeded.
     }
 
+    // Students: pull the real profile (student_id, code, name).
+    if (role == 'student') {
+      try {
+        final res = await _api.get('/students/me');
+        if (res.data is Map) {
+          final p = Map<String, dynamic>.from(res.data as Map);
+          final sid = p['student_id']?.toString();
+          final code = p['student_code']?.toString();
+          final sname = p['student_name']?.toString();
+          if (sid != null && sid.isNotEmpty) {
+            await SessionManager.saveMeta(email, 'student_id', sid);
+          }
+          if (code != null && code.isNotEmpty) {
+            await SessionManager.saveMeta(email, 'student_code', code);
+          }
+          if (sname != null && sname.isNotEmpty) {
+            displayName = sname;
+            await SessionManager.save(
+              token: token,
+              role: role,
+              email: email,
+              name: displayName,
+            );
+          }
+        }
+      } catch (_) {}
+    }
+
+    // Staff: pull the real profile (staff_id, name) — this is the number
+    // the admin uses for section assignment.
+    if (role == 'lecturer' || role == 'ta') {
+      try {
+        final res = await _api.get('/staff/me');
+        if (res.data is Map) {
+          final p = Map<String, dynamic>.from(res.data as Map);
+          final sid = p['staff_id']?.toString();
+          final sname = p['staff_name']?.toString();
+          if (sid != null && sid.isNotEmpty) {
+            await SessionManager.saveMeta(email, 'staff_id', sid);
+          }
+          if (sname != null && sname.isNotEmpty) {
+            displayName = sname;
+            await SessionManager.save(
+              token: token,
+              role: role,
+              email: email,
+              name: displayName,
+            );
+          }
+        }
+      } catch (_) {}
+    }
+
     return LoginResult(displayName: displayName, role: role);
   }
 

@@ -128,6 +128,8 @@ class _CheckInSheetState extends State<CheckInSheet> {
         return tr('r_closed');
       case 'not_enrolled':
         return tr('r_enrolled');
+      case 'manually_recorded':
+        return tr('r_manual');
       case 'too_many_attempts':
         return tr('r_many');
       default:

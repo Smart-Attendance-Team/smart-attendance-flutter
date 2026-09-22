@@ -255,6 +255,10 @@ class _LiveRosterScreenState extends State<LiveRosterScreen> {
                         ),
                         _count('${summary['late'] ?? 0}', tr('st_late')),
                         _count(
+                          '${summary['excused'] ?? 0}',
+                          tr('st_excused'),
+                        ),
+                        _count(
                           '${summary['absent'] ?? 0}',
                           tr('st_absent'),
                         ),
@@ -341,6 +345,7 @@ class _LiveRosterScreenState extends State<LiveRosterScreen> {
                               subtitle: Text(
                                 '${ltr(s['student_code'] ?? '')}'
                                 '${late is int && late > 0 ? ' • ${ltr(late)}' : ''}'
+                                ' • ${ltr(s['source'] ?? '')}'
                                 ' • ${ltr(Format.time(s['attendance_timestamp']?.toString()))}',
                                 style: const TextStyle(fontSize: 12),
                               ),

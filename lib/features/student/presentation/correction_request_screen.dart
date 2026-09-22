@@ -20,6 +20,7 @@ class _CorrectionRequestScreenState extends State<CorrectionRequestScreen> {
   final _formKey = GlobalKey<FormState>();
   final _attendanceId = TextEditingController();
   final _reason = TextEditingController();
+  final _evidence = TextEditingController();
   final _api = ApiClient();
   String _status = 'present';
   bool _sending = false;
@@ -35,6 +36,7 @@ class _CorrectionRequestScreenState extends State<CorrectionRequestScreen> {
   void dispose() {
     _attendanceId.dispose();
     _reason.dispose();
+    _evidence.dispose();
     super.dispose();
   }
 
@@ -42,12 +44,14 @@ class _CorrectionRequestScreenState extends State<CorrectionRequestScreen> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _sending = true);
     try {
+      final evidence = _evidence.text.trim();
       await _api.postMap(
         '/corrections',
         data: {
           'attendance_id': int.parse(_attendanceId.text.trim()),
           'requested_status': _status,
           'reason': _reason.text.trim(),
+          if (evidence.isNotEmpty) 'evidence_url': evidence,
         },
       );
       if (!mounted) return;
@@ -134,6 +138,13 @@ class _CorrectionRequestScreenState extends State<CorrectionRequestScreen> {
                       maxLines: 3,
                       validator: (v) => Validators.min(v, 3, 'nm_reason'),
                     ),
+                    const SizedBox(height: 12),
+                    AppField(
+                      controller: _evidence,
+                      label: tr('evidence_url'),
+                      hint: 'https://…',
+                      keyboardType: TextInputType.url,
+                    ),
                     const SizedBox(height: 14),
                     AppButton(
                       label: tr('submit_req'),
@@ -197,6 +208,21 @@ class _CorrectionRequestScreenState extends State<CorrectionRequestScreen> {
                                     fontSize: 12,
                                   ),
                                 ),
+                                if (r['review_reason'] != null &&
+                                    '${r['review_reason']}'.isNotEmpty)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 2),
+                                    child: Text(
+                                      tr('review_by', {
+                                        'r': '${r['review_reason']}',
+                                      }),
+                                      style: const TextStyle(
+                                        color: Color(0xFF64748B),
+                                        fontSize: 12,
+                                        fontStyle: FontStyle.italic,
+                                      ),
+                                    ),
+                                  ),
                               ],
                             ),
                           ),

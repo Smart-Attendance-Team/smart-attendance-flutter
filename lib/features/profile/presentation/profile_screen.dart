@@ -31,10 +31,12 @@ class _ProfileData {
   final String email;
   final String? userId;
   final List<_Stat> stats;
+  final Map<String, String> extra;
   const _ProfileData({
     required this.email,
     required this.userId,
     required this.stats,
+    this.extra = const {},
   });
 }
 
@@ -62,8 +64,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     final role = widget.userRole.toLowerCase();
     List<_Stat> stats = const [];
+    final extra = <String, String>{};
     try {
       if (role == 'student') {
+        try {
+          final p = await _api.get('/students/me');
+          if (p.data is Map) {
+            final m = Map<String, dynamic>.from(p.data as Map);
+            if (m['student_code'] != null) {
+              extra[tr('student_code_l')] = '${m['student_code']}';
+            }
+            if (m['level'] != null) extra[tr('level_l')] = '${m['level']}';
+            if (m['department_name'] != null) {
+              extra[tr('dept_l')] = '${m['department_name']}';
+            }
+          }
+        } catch (_) {}
         final recs = await _api.getList('/attendance/me');
         var present = 0, late = 0, absent = 0;
         for (final raw in recs) {
@@ -89,6 +105,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _Stat(tr('my_requests'), '${mine.length}'),
         ];
       } else if (role == 'lecturer' || role == 'ta') {
+        try {
+          final p = await _api.get('/staff/me');
+          if (p.data is Map) {
+            final m = Map<String, dynamic>.from(p.data as Map);
+            if (m['staff_type'] != null) {
+              extra[tr('t_type')] = '${m['staff_type']}';
+            }
+            if (m['department_name'] != null) {
+              extra[tr('dept_l')] = '${m['department_name']}';
+            }
+          }
+        } catch (_) {}
         final pending = await _api.getList('/corrections/pending');
         stats = [_Stat(tr('pending_n'), '${pending.length}')];
       } else if (role == 'admin' || role == 'administrator') {
@@ -127,6 +155,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       email: session?.email ?? '',
       userId: userId,
       stats: stats,
+      extra: extra,
     );
   }
 
@@ -215,6 +244,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       title: Text(tr('f_role')),
                       subtitle: Text(_roleLabel),
                     ),
+                    for (final e in data.extra.entries) ...[
+                      const Divider(height: 1, indent: 16, endIndent: 16),
+                      ListTile(
+                        leading: const Icon(Icons.info_outline_rounded),
+                        title: Text(e.key),
+                        subtitle: Text(ltr(e.value)),
+                      ),
+                    ],
                   ],
                 ),
               ),

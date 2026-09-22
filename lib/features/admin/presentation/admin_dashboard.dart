@@ -5,6 +5,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_drawer.dart';
 import '../../../core/widgets/ui.dart';
 import 'courses_screen.dart';
+import 'departments_screen.dart';
 import 'enrollment_screen.dart';
 import 'people_screen.dart';
 import 'reports_screen.dart';
@@ -34,6 +35,14 @@ class AdminDashboard extends StatelessWidget {
             child: ListView(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
               children: [
+                MenuTile(
+                  icon: Icons.account_balance_rounded,
+                  color: Colors.teal,
+                  title: tr('departments'),
+                  subtitle: tr('departments_sub'),
+                  onTap: () => go(const DepartmentsScreen()),
+                ),
+                const SizedBox(height: 12),
                 MenuTile(
                   icon: Icons.menu_book_rounded,
                   color: AppColors.primary,

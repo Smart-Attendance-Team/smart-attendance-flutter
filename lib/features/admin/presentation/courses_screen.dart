@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../core/l10n/strings.dart';
 import '../../../core/network/api_client.dart';
@@ -48,6 +49,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
   Future<void> _create() async {
     final code = TextEditingController();
     final name = TextEditingController();
+    final dept = TextEditingController();
     final ok = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
@@ -59,6 +61,13 @@ class _CoursesScreenState extends State<CoursesScreen> {
               AppField(controller: code, label: tr('code_ex')),
               const SizedBox(height: 12),
               AppField(controller: name, label: tr('course_name')),
+              const SizedBox(height: 12),
+              AppField(
+                controller: dept,
+                label: tr('dept_id'),
+                keyboardType: TextInputType.number,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              ),
             ],
           ),
         ),
@@ -77,13 +86,19 @@ class _CoursesScreenState extends State<CoursesScreen> {
     );
     final c = code.text.trim();
     final n = name.text.trim();
+    final deptId = int.tryParse(dept.text.trim());
     code.dispose();
     name.dispose();
+    dept.dispose();
     if (ok != true || c.isEmpty || n.isEmpty) return;
     try {
       await _api.postMap(
         '/admin/courses',
-        data: {'course_code': c, 'course_name': n},
+        data: {
+          'course_code': c,
+          'course_name': n,
+          if (deptId case final d) 'department_id': d,
+        },
       );
       if (!mounted) return;
       _reload();

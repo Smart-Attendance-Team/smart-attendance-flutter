@@ -199,6 +199,13 @@ class _CorrectionRequestsScreenState extends State<CorrectionRequestsScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(
+                      tr('record_n', {'id': ltr(r['attendance_id'] ?? '-')}),
+                      style: const TextStyle(
+                        color: AppColors.textGrey,
+                        fontSize: 12,
+                      ),
+                    ),
+                    Text(
                       '“${r['reason'] ?? ''}”',
                       style: const TextStyle(fontSize: 14),
                     ),
@@ -216,10 +223,12 @@ class _CorrectionRequestsScreenState extends State<CorrectionRequestsScreen> {
                             ),
                             onPressed: id == null
                                 ? null
-                                : () => _decide(
-                                    (id as num).toInt(),
-                                    'rejected',
-                                  ),
+                                : () {
+                                    final rid = Format.asInt(id);
+                                    if (rid != null) {
+                                      _decide(rid, 'rejected');
+                                    }
+                                  },
                             child: Text(tr('reject')),
                           ),
                         ),
@@ -232,10 +241,12 @@ class _CorrectionRequestsScreenState extends State<CorrectionRequestsScreen> {
                             ),
                             onPressed: id == null
                                 ? null
-                                : () => _decide(
-                                    (id as num).toInt(),
-                                    'approved',
-                                  ),
+                                : () {
+                                    final rid = Format.asInt(id);
+                                    if (rid != null) {
+                                      _decide(rid, 'approved');
+                                    }
+                                  },
                             child: Text(tr('approve')),
                           ),
                         ),

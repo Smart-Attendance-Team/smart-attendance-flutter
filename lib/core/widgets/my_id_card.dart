@@ -8,8 +8,9 @@ import 'ui.dart';
 
 /// Display-only card with the logged-in user's own numbers:
 /// - account ID (`userId` from GET /me),
-/// - the assignment/enrollment number if one was saved for this account
-///   (`staff_id` for lecturers, `student_id` for students).
+/// - the real assignment/enrollment number saved at login
+///   (`staff_id` from GET /staff/me for lecturers,
+///    `student_id` from GET /students/me for students).
 /// No buttons or editing — view only.
 class MyIdCard extends StatefulWidget {
   /// Storage key: 'staff_id' or 'student_id'.
@@ -18,10 +19,16 @@ class MyIdCard extends StatefulWidget {
   /// Translated label for the second row.
   final String metaLabel;
 
+  /// Optional third row (e.g. student_code).
+  final String? extraMetaKey;
+  final String? extraMetaLabel;
+
   const MyIdCard({
     super.key,
     required this.metaKey,
     required this.metaLabel,
+    this.extraMetaKey,
+    this.extraMetaLabel,
   });
 
   @override
@@ -45,10 +52,17 @@ class _MyIdCardState extends State<MyIdCard> {
       if (me.data is Map) uid = (me.data as Map)['userId']?.toString();
     } catch (_) {}
     String? saved;
+    String? extra;
     if (session != null) {
       saved = await SessionManager.readMeta(session.email, widget.metaKey);
+      if (widget.extraMetaKey != null) {
+        extra = await SessionManager.readMeta(
+          session.email,
+          widget.extraMetaKey!,
+        );
+      }
     }
-    return {'uid': uid, 'saved': saved};
+    return {'uid': uid, 'saved': saved, 'extra': extra};
   }
 
   @override
@@ -58,6 +72,9 @@ class _MyIdCardState extends State<MyIdCard> {
       builder: (context, snapshot) {
         final uid = snapshot.data?['uid'];
         final saved = snapshot.data?['saved'];
+        final extra = snapshot.data?['extra'];
+        final showExtra =
+            widget.extraMetaKey != null && widget.extraMetaLabel != null;
         return AppCard(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: Column(
@@ -108,6 +125,39 @@ class _MyIdCardState extends State<MyIdCard> {
                   ),
                 ],
               ),
+              if (showExtra) ...[
+                const Divider(height: 8),
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.tag_rounded,
+                      color: AppColors.primary,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            widget.extraMetaLabel!,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: AppColors.textGrey,
+                            ),
+                          ),
+                          Text(
+                            extra == null ? '—' : ltr(extra),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ],
           ),
         );

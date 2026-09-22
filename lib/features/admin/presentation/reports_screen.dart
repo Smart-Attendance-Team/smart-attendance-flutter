@@ -1,4 +1,8 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../core/l10n/strings.dart';
 import '../../../core/network/api_client.dart';
@@ -20,6 +24,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
   final _course = TextEditingController();
   final _section = TextEditingController();
   final _student = TextEditingController();
+  final _staff = TextEditingController();
+  final _from = TextEditingController();
+  final _to = TextEditingController();
   late Future<Map<String, dynamic>> _future;
 
   @override
@@ -33,6 +40,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
     _course.dispose();
     _section.dispose();
     _student.dispose();
+    _staff.dispose();
+    _from.dispose();
+    _to.dispose();
     super.dispose();
   }
 
@@ -44,7 +54,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
     return ApiClient.asMap(res.data);
   }
 
-  void _apply() {
+  Map<String, dynamic> _filters() {
     final f = <String, dynamic>{};
     if (_course.text.trim().isNotEmpty) f['course_code'] = _course.text.trim();
     final sec = int.tryParse(_section.text.trim());
@@ -52,13 +62,70 @@ class _ReportsScreenState extends State<ReportsScreen> {
     if (_student.text.trim().isNotEmpty) {
       f['student_code'] = _student.text.trim();
     }
-    setState(() => _future = _load(f));
+    final staff = int.tryParse(_staff.text.trim());
+    if (staff != null) f['staff_id'] = staff;
+    if (_from.text.trim().isNotEmpty) f['from'] = _from.text.trim();
+    if (_to.text.trim().isNotEmpty) f['to'] = _to.text.trim();
+    return f;
+  }
+
+  void _apply() => setState(() => _future = _load(_filters()));
+
+  /// GET /reports/attendance/export?format=csv with the same filters,
+  /// saved to a temp file and shared via the system sheet.
+  Future<void> _export() async {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(tr('exporting'))),
+    );
+    try {
+      final csv = await _api.getCsv(
+        '/reports/attendance/export',
+        queryParameters: {'format': 'csv', ..._filters()},
+      );
+      if (csv.trim().isEmpty) throw ApiException(tr('no_rows'));
+      final dir = await getTemporaryDirectory();
+      final file = File(
+        '${dir.path}/attendance-report-${DateTime.now().millisecondsSinceEpoch}.csv',
+      );
+      await file.writeAsString(csv);
+      if (!mounted) return;
+      await Share.shareXFiles(
+        [XFile(file.path, mimeType: 'text/csv')],
+        text: tr('export_csv'),
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(tr('exported_ok'))),
+        );
+      }
+    } on ApiException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.message)));
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(tr('cant_load'))),
+        );
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(tr('reports'))),
+      appBar: AppBar(
+        title: Text(tr('reports')),
+        actions: [
+          IconButton(
+            tooltip: tr('export_csv'),
+            onPressed: _export,
+            icon: const Icon(Icons.download_rounded),
+          ),
+        ],
+      ),
       body: Column(
         children: [
           Container(
@@ -96,15 +163,40 @@ class _ReportsScreenState extends State<ReportsScreen> {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    SizedBox(
-                      width: 120,
-                      child: AppButton(
-                        label: tr('filter'),
-                        icon: Icons.search_rounded,
-                        onPressed: _apply,
+                    Expanded(
+                      child: AppField(
+                        controller: _staff,
+                        label: tr('staff_f'),
+                        keyboardType: TextInputType.number,
                       ),
                     ),
                   ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: AppField(
+                        controller: _from,
+                        label: tr('from_f'),
+                        hint: '2026-09-01',
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: AppField(
+                        controller: _to,
+                        label: tr('to_f'),
+                        hint: '2026-09-30',
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                AppButton(
+                  label: tr('filter'),
+                  icon: Icons.search_rounded,
+                  onPressed: _apply,
                 ),
               ],
             ),
@@ -149,6 +241,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           't': ltr(summary['total'] ?? rows.length),
                           'p': ltr(summary['present'] ?? '-'),
                           'l': ltr(summary['late'] ?? '-'),
+                          'e': ltr(summary['excused'] ?? '-'),
                           'a': ltr(summary['absent'] ?? '-'),
                           'r': ltr(summary['attendance_rate_percent'] ?? '-'),
                         }),
@@ -177,14 +270,24 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                         CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        '${r['student_name'] ?? r['student_code'] ?? '-'}',
+                                        ltr(r['student_name'] ??
+                                            r['student_code'] ??
+                                            '-'),
                                         style: const TextStyle(
                                           fontWeight: FontWeight.bold,
                                           fontSize: 14,
                                         ),
                                       ),
                                       Text(
-                                        '${ltr(r['course_code'] ?? '')} • ${ltr(Format.dateShort(r['session_date']?.toString()))} • ${ltr(r['source'] ?? '')}',
+                                        '${ltr(r['course_name'] ?? r['course_code'] ?? '')} • ${ltr(r['section_name'] ?? '')}',
+                                        style: const TextStyle(
+                                          color: AppColors.textGrey,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                      Text(
+                                        '${ltr(r['course_code'] ?? '')} • ${ltr(r['student_code'] ?? '')} • ${ltr(Format.dateShort(r['session_date']?.toString()))}'
+                                        '${(r['minutes_late'] is int && (r['minutes_late'] as int) > 0) ? ' • ${ltr(r['minutes_late'])}' : ''} • ${ltr(r['source'] ?? '')}',
                                         style: const TextStyle(
                                           color: AppColors.textGrey,
                                           fontSize: 12,

@@ -1,34 +1,32 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../../../core/l10n/strings.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/ui.dart';
 
-/// GET /admin/sections + POST {course_id, section_name, semester}
-class SectionsScreen extends StatefulWidget {
-  const SectionsScreen({super.key});
+/// GET /admin/departments + POST /admin/departments {department_name}
+class DepartmentsScreen extends StatefulWidget {
+  const DepartmentsScreen({super.key});
 
   @override
-  State<SectionsScreen> createState() => _SectionsScreenState();
+  State<DepartmentsScreen> createState() => _DepartmentsScreenState();
 }
 
-class _SectionsScreenState extends State<SectionsScreen> {
+class _DepartmentsScreenState extends State<DepartmentsScreen> {
   final _api = ApiClient();
   late Future<List<dynamic>> _future;
 
   @override
   void initState() {
     super.initState();
-    _future = _api.getList('/admin/sections');
+    _future = _api.getList('/admin/departments');
   }
 
-  /// Reload that never replaces the screen with an error page:
-  /// on failure it keeps the old list and shows a snackbar only.
+  /// Reload that never replaces the screen with an error page.
   Future<void> _reload() async {
     try {
-      final fresh = await _api.getList('/admin/sections');
+      final fresh = await _api.getList('/admin/departments');
       if (!mounted) return;
       setState(() => _future = Future.value(fresh));
     } on ApiException catch (e) {
@@ -47,38 +45,13 @@ class _SectionsScreenState extends State<SectionsScreen> {
   }
 
   Future<void> _create() async {
-    final courseId = TextEditingController();
     final name = TextEditingController();
-    final semester = TextEditingController();
-    final capacity = TextEditingController();
     final ok = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: Text(tr('new_section')),
+        title: Text(tr('new_department')),
         content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-            AppField(
-              controller: courseId,
-              label: '${tr('course_f')} ID',
-              helper: tr('h_course_id'),
-              keyboardType: TextInputType.number,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            ),
-            const SizedBox(height: 12),
-            AppField(controller: name, label: tr('sec_name')),
-            const SizedBox(height: 12),
-            AppField(controller: semester, label: tr('semester')),
-            const SizedBox(height: 12),
-            AppField(
-              controller: capacity,
-              label: tr('capacity'),
-              keyboardType: TextInputType.number,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            ),
-            ],
-          ),
+          child: AppField(controller: name, label: tr('dept_name')),
         ),
         actions: [
           TextButton(
@@ -93,24 +66,13 @@ class _SectionsScreenState extends State<SectionsScreen> {
         ],
       ),
     );
-    final cid = int.tryParse(courseId.text.trim());
     final n = name.text.trim();
-    final s = semester.text.trim();
-    final cap = int.tryParse(capacity.text.trim());
-    courseId.dispose();
     name.dispose();
-    semester.dispose();
-    capacity.dispose();
-    if (ok != true || cid == null || n.isEmpty || s.isEmpty) return;
+    if (ok != true || n.isEmpty) return;
     try {
       await _api.postMap(
-        '/admin/sections',
-        data: {
-          'course_id': cid,
-          'section_name': n,
-          'semester': s,
-          if (cap case final cc) 'capacity': cc,
-        },
+        '/admin/departments',
+        data: {'department_name': n},
       );
       if (!mounted) return;
       _reload();
@@ -136,7 +98,7 @@ class _SectionsScreenState extends State<SectionsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(tr('sections')),
+        title: Text(tr('departments')),
         actions: [
           IconButton(onPressed: _reload, icon: const Icon(Icons.refresh)),
         ],
@@ -144,7 +106,7 @@ class _SectionsScreenState extends State<SectionsScreen> {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _create,
         icon: const Icon(Icons.add),
-        label: Text(tr('sections')),
+        label: Text(tr('departments')),
       ),
       body: FutureBuilder<List<dynamic>>(
         future: _future,
@@ -166,14 +128,14 @@ class _SectionsScreenState extends State<SectionsScreen> {
               .map(Map<String, dynamic>.from)
               .toList();
           if (items.isEmpty) {
-            return AppEmpty(message: tr('no_sections'));
+            return AppEmpty(message: tr('no_departments'));
           }
           return ListView.separated(
             padding: const EdgeInsets.all(16),
             itemCount: items.length,
             separatorBuilder: (_, _) => const SizedBox(height: 10),
             itemBuilder: (context, i) {
-              final s = items[i];
+              final d = items[i];
               return AppCard(
                 padding: const EdgeInsets.all(14),
                 child: Row(
@@ -181,12 +143,12 @@ class _SectionsScreenState extends State<SectionsScreen> {
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: Colors.purple.withValues(alpha: 0.1),
+                        color: AppColors.primaryLight,
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Icon(
-                        Icons.group_work_outlined,
-                        color: Colors.purple,
+                        Icons.account_balance_rounded,
+                        color: AppColors.primary,
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -195,13 +157,13 @@ class _SectionsScreenState extends State<SectionsScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            s['section_name']?.toString() ?? '-',
+                            d['department_name']?.toString() ?? '-',
                             style: const TextStyle(
                               fontWeight: FontWeight.bold,
                             ),
                           ),
                           Text(
-                            'ID ${ltr(s['section_id'] ?? '-')} • Course ${ltr(s['course_id'] ?? '-')} • ${ltr(s['semester'] ?? '')}',
+                            'ID ${ltr(d['department_id'] ?? '-')}',
                             style: const TextStyle(
                               color: AppColors.textGrey,
                               fontSize: 12,

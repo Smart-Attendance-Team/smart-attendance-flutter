@@ -17,6 +17,7 @@ class AuditHistoryScreen extends StatefulWidget {
 class _AuditHistoryScreenState extends State<AuditHistoryScreen> {
   final _api = ApiClient();
   final _action = TextEditingController();
+  final _entity = TextEditingController();
   late Future<Map<String, dynamic>> _future;
 
   @override
@@ -28,6 +29,7 @@ class _AuditHistoryScreenState extends State<AuditHistoryScreen> {
   @override
   void dispose() {
     _action.dispose();
+    _entity.dispose();
     super.dispose();
   }
 
@@ -42,6 +44,9 @@ class _AuditHistoryScreenState extends State<AuditHistoryScreen> {
   void _apply() {
     final f = <String, dynamic>{};
     if (_action.text.trim().isNotEmpty) f['action'] = _action.text.trim();
+    if (_entity.text.trim().isNotEmpty) {
+      f['entity_type'] = _entity.text.trim();
+    }
     setState(() => _future = _load(f));
   }
 
@@ -54,23 +59,32 @@ class _AuditHistoryScreenState extends State<AuditHistoryScreen> {
           Container(
             padding: const EdgeInsets.all(16),
             color: Colors.white,
-            child: Row(
+            child: Column(
               children: [
-                Expanded(
-                  child: AppField(
-                    controller: _action,
-                    label: tr('action_f'),
-                    hint: 'attendance.manual_update',
-                  ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: AppField(
+                        controller: _action,
+                        label: tr('action_f'),
+                        hint: 'attendance.manual_update',
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: AppField(
+                        controller: _entity,
+                        label: tr('entity_f'),
+                        hint: 'attendance',
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 8),
-                SizedBox(
-                  width: 110,
-                  child: AppButton(
-                    label: tr('filter'),
-                    icon: Icons.search_rounded,
-                    onPressed: _apply,
-                  ),
+                const SizedBox(height: 10),
+                AppButton(
+                  label: tr('filter'),
+                  icon: Icons.search_rounded,
+                  onPressed: _apply,
                 ),
               ],
             ),

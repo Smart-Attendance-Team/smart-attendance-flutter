@@ -87,6 +87,8 @@ class StudentDashboard extends StatelessWidget {
                 MyIdCard(
                   metaKey: 'student_id',
                   metaLabel: tr('student_id_l'),
+                  extraMetaKey: 'student_code',
+                  extraMetaLabel: tr('student_code_l'),
                 ),
                 const SizedBox(height: 12),
                 MenuTile(
@@ -163,10 +165,10 @@ class _StudentOverviewState extends State<_StudentOverview> {
             ),
           );
         }
-        if (snapshot.hasError || !(snapshot.hasData)) {
+        if (snapshot.hasError || snapshot.data == null) {
           return const SizedBox.shrink();
         }
-        final recs = snapshot.data!;
+        final recs = snapshot.data ?? const <Map<String, dynamic>>[];
         final byCourse = <String, Map<String, String>>{};
         for (final r in recs) {
           final code = r['course_code']?.toString() ?? '-';

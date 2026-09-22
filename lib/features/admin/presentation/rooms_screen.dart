@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../core/l10n/strings.dart';
 import '../../../core/network/api_client.dart';
@@ -47,6 +48,8 @@ class _RoomsScreenState extends State<RoomsScreen> {
 
   Future<void> _create() async {
     final name = TextEditingController();
+    final building = TextEditingController();
+    final capacity = TextEditingController();
     var type = 'lecture';
     final ok = await showDialog<bool>(
       context: context,
@@ -68,6 +71,15 @@ class _RoomsScreenState extends State<RoomsScreen> {
                 ],
                 onChanged: (v) => setDialog(() => type = v ?? type),
               ),
+              const SizedBox(height: 12),
+              AppField(controller: building, label: tr('building')),
+              const SizedBox(height: 12),
+              AppField(
+                controller: capacity,
+                label: tr('capacity'),
+                keyboardType: TextInputType.number,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              ),
               ],
             ),
           ),
@@ -86,12 +98,21 @@ class _RoomsScreenState extends State<RoomsScreen> {
       ),
     );
     final n = name.text.trim();
+    final b = building.text.trim();
+    final cap = int.tryParse(capacity.text.trim());
     name.dispose();
+    building.dispose();
+    capacity.dispose();
     if (ok != true || n.isEmpty) return;
     try {
       await _api.postMap(
         '/admin/rooms',
-        data: {'room_name': n, 'room_type': type},
+        data: {
+          'room_name': n,
+          'room_type': type,
+          if (b.isNotEmpty) 'building': b,
+          if (cap case final cc) 'capacity': cc,
+        },
       );
       if (!mounted) return;
       _reload();

@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 
 import '../../../core/l10n/strings.dart';
 import '../../../core/network/api_client.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/format.dart';
 import '../../../core/widgets/ui.dart';
 
 /// GET /admin/timetable-slots + POST
@@ -27,6 +29,10 @@ class _TimetableScreenState extends State<TimetableScreen> {
     'Thursday',
     'Friday',
   ];
+
+  static final _timePattern = RegExp(r'^\d{2}:\d{2}$');
+
+  bool _validTime(String v) => _timePattern.hasMatch(v.trim());
 
   @override
   void initState() {
@@ -130,11 +136,20 @@ class _TimetableScreenState extends State<TimetableScreen> {
     );
     final sid = int.tryParse(section.text.trim());
     final rid = int.tryParse(room.text.trim());
+    final st = start.text.trim();
+    final en = end.text.trim();
     section.dispose();
     room.dispose();
     start.dispose();
     end.dispose();
     if (ok != true || sid == null || rid == null) return;
+    if (!_validTime(st) || !_validTime(en)) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(tr('bad_time'))),
+      );
+      return;
+    }
     try {
       await _api.postMap(
         '/admin/timetable-slots',
@@ -142,14 +157,177 @@ class _TimetableScreenState extends State<TimetableScreen> {
           'section_id': sid,
           'room_id': rid,
           'day_of_week': day,
-          'start_time': start.text.trim(),
-          'end_time': end.text.trim(),
+          'start_time': st,
+          'end_time': en,
         },
       );
       if (!mounted) return;
       _reload();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(tr('created_ok'))),
+      );
+    } on ApiException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.message)));
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(tr('cant_load'))),
+        );
+      }
+    }
+  }
+
+  /// PATCH /admin/timetable-slots/{id} — send only changed fields.
+  Future<void> _editSlot(Map<String, dynamic> s) async {
+    final id = s['slot_id'];
+    if (id is! num) return;
+    final room = TextEditingController(text: '${s['room_id'] ?? ''}');
+    final start = TextEditingController(
+      text: Format.head(s['start_time']?.toString(), 5),
+    );
+    final end = TextEditingController(
+      text: Format.head(s['end_time']?.toString(), 5),
+    );
+    var day = '${s['day_of_week'] ?? days[0]}';
+    if (!days.contains(day)) day = days[0];
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => StatefulBuilder(
+        builder: (_, setDialog) => AlertDialog(
+          title: Text(tr('edit_slot')),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                AppField(
+                  controller: room,
+                  label: 'Room ID',
+                  helper: tr('h_room_id'),
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  initialValue: day,
+                  decoration: InputDecoration(labelText: tr('day')),
+                  items: [
+                    for (final d in days)
+                      DropdownMenuItem(value: d, child: Text(d)),
+                  ],
+                  onChanged: (v) => setDialog(() => day = v ?? day),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: AppField(
+                        controller: start,
+                        label: tr('start'),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: AppField(controller: end, label: tr('end')),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text(tr('cancel')),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(minimumSize: const Size(100, 44)),
+              onPressed: () => Navigator.pop(context, true),
+              child: Text(tr('save')),
+            ),
+          ],
+        ),
+      ),
+    );
+    final rid = int.tryParse(room.text.trim());
+    final st = start.text.trim();
+    final en = end.text.trim();
+    room.dispose();
+    start.dispose();
+    end.dispose();
+    if (ok != true) return;
+    if (!_validTime(st) || !_validTime(en)) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(tr('bad_time'))),
+      );
+      return;
+    }
+    try {
+      await _api.patchMap(
+        '/admin/timetable-slots/${id.toInt()}',
+        data: {
+          if (rid case final r) 'room_id': r,
+          'day_of_week': day,
+          'start_time': st,
+          'end_time': en,
+        },
+      );
+      if (!mounted) return;
+      _reload();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(tr('saved_ok'))),
+      );
+    } on ApiException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.message)));
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(tr('cant_load'))),
+        );
+      }
+    }
+  }
+
+  /// DELETE /admin/timetable-slots/{id} — only slots with no sessions.
+  Future<void> _deleteSlot(Map<String, dynamic> s) async {
+    final id = s['slot_id'];
+    if (id is! num) return;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text(tr('delete_slot')),
+        content: Text(tr('delete_confirm')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(tr('cancel')),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              minimumSize: const Size(100, 44),
+              backgroundColor: AppColors.error,
+            ),
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(tr('delete_slot')),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      await _api.delete('/admin/timetable-slots/${id.toInt()}');
+      if (!mounted) return;
+      _reload();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(tr('deleted_ok'))),
       );
     } on ApiException catch (e) {
       if (mounted) {
@@ -222,8 +400,10 @@ class _TimetableScreenState extends State<TimetableScreen> {
                       child: Column(
                         children: [
                           Text(
-                            (s['day_of_week']?.toString() ?? '-')
-                                .substring(0, 3),
+                            Format.head(
+                              s['day_of_week']?.toString() ?? '-',
+                              3,
+                            ),
                             style: const TextStyle(
                               fontWeight: FontWeight.bold,
                               color: Colors.orange,
@@ -259,6 +439,20 @@ class _TimetableScreenState extends State<TimetableScreen> {
                           ),
                         ],
                       ),
+                    ),
+                    IconButton(
+                      tooltip: tr('edit_slot'),
+                      icon: const Icon(Icons.edit_outlined, size: 20),
+                      onPressed: () => _editSlot(s),
+                    ),
+                    IconButton(
+                      tooltip: tr('delete_slot'),
+                      icon: const Icon(
+                        Icons.delete_outline_rounded,
+                        size: 20,
+                        color: AppColors.error,
+                      ),
+                      onPressed: () => _deleteSlot(s),
                     ),
                   ],
                 ),
