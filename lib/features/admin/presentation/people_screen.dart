@@ -1,8 +1,13 @@
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../core/l10n/strings.dart';
 import '../../../core/network/api_client.dart';
+import '../../../core/utils/format.dart';
 import '../../../core/widgets/ui.dart';
 
 /// POST /admin/students {email, password, student_code, student_name, ...}
@@ -32,13 +37,11 @@ class _PeopleScreenState extends State<PeopleScreen>
   final _tDept = TextEditingController();
   var _tType = 'lecturer';
 
-  // CSV import form (POST /admin/imports/students, body is text/csv).
+  // Simple CSV file import (POST /admin/imports/students, text/csv).
   final _csvPass = TextEditingController();
-  final _csvSection = TextEditingController();
-  final _csvDept = TextEditingController();
-  final _csvData = TextEditingController(
-    text: 'student_code,student_name,email,level\n',
-  );
+  String? _csvName;
+  String? _csvText;
+  int? _csvSectionId;
   bool _busy = false;
 
   @override
@@ -61,9 +64,6 @@ class _PeopleScreenState extends State<PeopleScreen>
     _tName.dispose();
     _tDept.dispose();
     _csvPass.dispose();
-    _csvSection.dispose();
-    _csvDept.dispose();
-    _csvData.dispose();
     super.dispose();
   }
 
@@ -205,26 +205,67 @@ class _PeopleScreenState extends State<PeopleScreen>
     );
   }
 
-  Future<void> _importCsv() async {
+  Future<void> _pickCsvFile() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: const ['csv', 'txt'],
+        withData: true,
+      );
+      final file = result?.files.single;
+      if (file == null) return;
+      String? text = file.bytes != null
+          ? utf8.decode(file.bytes!, allowMalformed: true)
+          : null;
+      if (text == null && file.path != null) {
+        text = await File(file.path!).readAsString();
+      }
+      if (!mounted) return;
+      setState(() {
+        _csvName = file.name;
+        _csvText = text?.trim().isEmpty == true ? null : text?.trim();
+      });
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(tr('cant_load'))),
+        );
+      }
+    }
+  }
+
+  int _csvRowCount() {
+    final text = _csvText;
+    if (text == null || text.isEmpty) return 0;
+    final lines = text
+        .split('\n')
+        .where((l) => l.trim().isNotEmpty)
+        .toList();
+    if (lines.isEmpty) return 0;
+    final first = lines.first.toLowerCase();
+    final hasHeader = first.contains('student_code') ||
+        first.contains('email') ||
+        first.contains('student_name');
+    return hasHeader ? lines.length - 1 : lines.length;
+  }
+
+  Future<void> _uploadCsv() async {
     final pass = _csvPass.text;
-    final csv = _csvData.text.trim();
+    final csv = _csvText;
+    if (csv == null || csv.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(tr('pick_file'))));
+      return;
+    }
     if (pass.length < 8) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(tr('csv_pass'))));
       return;
     }
-    if (csv.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(tr('csv_data'))));
-      return;
-    }
     final query = <String, dynamic>{'default_password': pass};
-    final sec = int.tryParse(_csvSection.text.trim());
-    final dept = int.tryParse(_csvDept.text.trim());
-    if (sec != null) query['section_id'] = sec;
-    if (dept != null) query['department_id'] = dept;
+    if (_csvSectionId != null) query['section_id'] = _csvSectionId;
     setState(() => _busy = true);
     try {
       final res = await _api.postCsv(
@@ -458,6 +499,26 @@ class _PeopleScreenState extends State<PeopleScreen>
                     ),
                   ),
                   const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    onPressed: _busy ? null : _pickCsvFile,
+                    icon: const Icon(Icons.attach_file_rounded),
+                    label: Text(
+                      _csvName ?? tr('pick_file'),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  if (_csvName != null) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      tr('file_rows', {'n': '${_csvRowCount()}'}),
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: Color(0xFF64748B),
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 12),
                   AppField(
                     controller: _csvPass,
                     label: tr('csv_pass'),
@@ -465,43 +526,18 @@ class _PeopleScreenState extends State<PeopleScreen>
                     prefixIcon: Icons.lock_outline_rounded,
                   ),
                   const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: AppField(
-                          controller: _csvSection,
-                          label: tr('csv_section'),
-                          keyboardType: TextInputType.number,
-                          inputFormatters: [
-                            FilteringTextInputFormatter.digitsOnly,
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: AppField(
-                          controller: _csvDept,
-                          label: tr('csv_dept'),
-                          keyboardType: TextInputType.number,
-                          inputFormatters: [
-                            FilteringTextInputFormatter.digitsOnly,
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  AppField(
-                    controller: _csvData,
-                    label: tr('csv_data'),
-                    maxLines: 8,
+                  _CsvSectionPicker(
+                    api: _api,
+                    value: _csvSectionId,
+                    onChanged: (v) =>
+                        setState(() => _csvSectionId = v),
                   ),
                   const SizedBox(height: 14),
                   AppButton(
                     label: tr('import_btn'),
                     icon: Icons.upload_file_outlined,
                     loading: _busy,
-                    onPressed: _importCsv,
+                    onPressed: _uploadCsv,
                   ),
                 ],
               ),
@@ -509,6 +545,69 @@ class _PeopleScreenState extends State<PeopleScreen>
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Section dropdown for the CSV import, loaded from GET /admin/sections.
+/// Null = no enrollment, students are only created.
+class _CsvSectionPicker extends StatefulWidget {
+  final ApiClient api;
+  final int? value;
+  final ValueChanged<int?> onChanged;
+
+  const _CsvSectionPicker({
+    required this.api,
+    required this.value,
+    required this.onChanged,
+  });
+
+  @override
+  State<_CsvSectionPicker> createState() => _CsvSectionPickerState();
+}
+
+class _CsvSectionPickerState extends State<_CsvSectionPicker> {
+  late final Future<List<Map<String, dynamic>>> _future;
+
+  @override
+  void initState() {
+    super.initState();
+    _future = widget.api.getList('/admin/sections').then(
+          (list) => list
+              .whereType<Map>()
+              .map(Map<String, dynamic>.from)
+              .toList(),
+        );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<List<Map<String, dynamic>>>(
+      future: _future,
+      builder: (context, snapshot) {
+        final sections = snapshot.data ?? const [];
+        return DropdownButtonFormField<int?>(
+          key: ValueKey<int?>(widget.value),
+          initialValue: widget.value,
+          decoration: InputDecoration(labelText: tr('pick_section')),
+          items: [
+            DropdownMenuItem(
+              value: null,
+              child: Text(tr('no_enroll')),
+            ),
+            for (final s in sections)
+              if (Format.asInt(s['section_id']) != null)
+                DropdownMenuItem(
+                  value: Format.asInt(s['section_id']),
+                  child: Text(
+                    '${s['section_name'] ?? ''} • ID ${s['section_id']}',
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+          ],
+          onChanged: widget.onChanged,
+        );
+      },
     );
   }
 }

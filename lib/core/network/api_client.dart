@@ -490,26 +490,6 @@ class ApiClient {
     return {};
   }
 
-  /// GET a raw CSV export (used by GET /reports/attendance/export).
-  Future<String> getCsv(
-    String path, {
-    Map<String, dynamic>? queryParameters,
-  }) async {
-    if (demoMode) {
-      return 'course_code,student_code,attendance_status\nCS101,S1001,present\n';
-    }
-    try {
-      final res = await _dio.get(
-        path,
-        queryParameters: queryParameters,
-        options: Options(responseType: ResponseType.plain),
-      );
-      return res.data?.toString() ?? '';
-    } on DioException catch (e) {
-      throw mapError(e);
-    }
-  }
-
   // ---------------------------------------------------------- parsing --
   static List<dynamic> asList(dynamic data) {
     if (data is List) return data;

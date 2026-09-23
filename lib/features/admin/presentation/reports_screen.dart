@@ -1,8 +1,4 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:share_plus/share_plus.dart';
 
 import '../../../core/l10n/strings.dart';
 import '../../../core/network/api_client.dart';
@@ -77,60 +73,11 @@ class _ReportsScreenState extends State<ReportsScreen> {
     return future.then((_) => true).catchError((_) => false);
   }
 
-  /// GET /reports/attendance/export?format=csv with the same filters,
-  /// saved to a temp file and shared via the system sheet.
-  Future<void> _export() async {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(tr('exporting'))),
-    );
-    try {
-      final csv = await _api.getCsv(
-        '/reports/attendance/export',
-        queryParameters: {'format': 'csv', ..._filters()},
-      );
-      if (csv.trim().isEmpty) throw ApiException(tr('no_rows'));
-      final dir = await getTemporaryDirectory();
-      final file = File(
-        '${dir.path}/attendance-report-${DateTime.now().millisecondsSinceEpoch}.csv',
-      );
-      await file.writeAsString(csv);
-      if (!mounted) return;
-      await Share.shareXFiles(
-        [XFile(file.path, mimeType: 'text/csv')],
-        text: tr('export_csv'),
-      );
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(tr('exported_ok'))),
-        );
-      }
-    } on ApiException catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(e.message)));
-      }
-    } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(tr('cant_load'))),
-        );
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text(tr('reports')),
-        actions: [
-          IconButton(
-            tooltip: tr('export_csv'),
-            onPressed: _export,
-            icon: const Icon(Icons.download_rounded),
-          ),
-        ],
       ),
       body: Column(
         children: [
