@@ -2,16 +2,13 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "smart_attendance (real device)",
+      "name": "smart_attendance (production)",
       "request": "launch",
       "type": "dart",
-      "program": "lib/main.dart",
-      "args": [
-        "--dart-define=API_BASE_URL=http://192.168.43.138:3000"
-      ]
+      "program": "lib/main.dart"
     },
     {
-      "name": "smart_attendance (emulator)",
+      "name": "smart_attendance (local backend)",
       "request": "launch",
       "type": "dart",
       "program": "lib/main.dart",

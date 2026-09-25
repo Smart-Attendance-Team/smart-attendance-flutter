@@ -38,8 +38,6 @@ class _SignInScreenState extends State<SignInScreen> {
         email: _email.text.trim(),
         password: _password.text,
       );
-      // Real login always leaves demo mode.
-      ApiClient.demoMode = false;
       if (mounted) {
         Navigator.pushReplacement(
           context,
@@ -179,15 +177,6 @@ class _SignInScreenState extends State<SignInScreen> {
                             loading: _loading,
                             onPressed: _submit,
                           ),
-                          const SizedBox(height: 8),
-                          TextButton.icon(
-                            onPressed: () => _enterDemo(context),
-                            icon: const Icon(
-                              Icons.visibility_outlined,
-                              size: 18,
-                            ),
-                            label: Text(tr('demo_mode')),
-                          ),
                         ],
                       ),
                     ),
@@ -197,46 +186,6 @@ class _SignInScreenState extends State<SignInScreen> {
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  /// Enters offline demo mode: canned data, no network calls.
-  /// Re-login for real turns it off automatically.
-  static Future<void> _enterDemo(BuildContext context) async {
-    const roles = ['student', 'lecturer', 'admin', 'auditor'];
-    const roleKeys = [
-      'role_student',
-      'role_lecturer',
-      'role_admin',
-      'role_auditor',
-    ];
-    final role = await showDialog<String>(
-      context: context,
-      builder: (_) => SimpleDialog(
-        title: Text(tr('view_as')),
-        children: [
-          for (var i = 0; i < roles.length; i++)
-            SimpleDialogOption(
-              onPressed: () => Navigator.pop(context, roles[i]),
-              child: Text(tr(roleKeys[i])),
-            ),
-        ],
-      ),
-    );
-    if (role == null || !context.mounted) return;
-    ApiClient.demoMode = true;
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (_) =>
-            RoleRouter(userName: 'Demo User', userRole: role),
-      ),
-    );
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(tr('demo_snack')),
-        behavior: SnackBarBehavior.floating,
       ),
     );
   }

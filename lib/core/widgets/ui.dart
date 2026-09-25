@@ -4,7 +4,6 @@ import 'package:flutter/services.dart';
 import '../theme/app_colors.dart';
 import '../l10n/app_locale.dart';
 import '../l10n/strings.dart';
-import '../network/api_client.dart';
 import '../storage/session_manager.dart';
 import '../../features/auth/presentation/sign_in_screen.dart';
 
@@ -559,7 +558,7 @@ Future<void> refreshWithToast(
   }
 }
 
-Future<void> logout(BuildContext context) async {  ApiClient.demoMode = false;
+Future<void> logout(BuildContext context) async {
   await SessionManager.clear();
   if (context.mounted) {
     Navigator.pushAndRemoveUntil(
